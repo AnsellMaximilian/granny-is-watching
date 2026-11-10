@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "skills": {
+    "babylonjs": {
+      "source": "Curiosity-Ai-BV/Babylonjs-Skill",
+      "sourceType": "github",
+      "skillPath": "BabylonJS/SKILL.md",
+      "computedHash": "f5768fa87cf4ff5a8a2c0c13c4fe727cf725bb8baa3cdc36af79a2d229333ba3"
+    },
+    "blender-image-to-3d": {
+      "source": "majidmanzarpour/blender-game-skills",
+      "sourceType": "github",
+      "skillPath": "skills/blender-image-to-3d/SKILL.md",
+      "computedHash": "94d6669dc51759e540a5d7a0a2924a0a9b2f5dd893d0876bd9c38389f32f9a22"
+    },
+    "using-smartspectra": {
+      "source": "Presage-Security/SmartSpectra",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/using-smartspectra/SKILL.md",
+      "computedHash": "ce4a701c609914e3c39d52074c3fd277c49b7d956c6fd3f1f7d7bef9783a66c4"
+    }
+  }
+}
