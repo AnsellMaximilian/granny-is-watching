@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self' blob: ws:; object-src 'none'; base-uri 'none'" />
+  <title>Granny is Watching</title>
+</head>
+<body>
+  <main>
+    <canvas id="scene" aria-hidden="true"></canvas>
+    <div class="lens" aria-hidden="true"></div>
+    <div id="eyelids" aria-hidden="true"></div>
+    <section id="intro" class="intro" aria-labelledby="game-title">
+      <h1 id="game-title">Granny is<br />Watching</h1>
+      <button id="wake" class="action" type="button" disabled>Loading…</button>
+    </section>
+    <section id="invitation" class="invitation" aria-label="Granny's invitation" hidden>
+      <p>“Duduk.”</p>
+      <button id="sit" class="action" type="button">Sit down</button>
+    </section>
+    <section id="match" aria-label="Congklak" hidden>
+      <header class="scoreboard">
+        <div class="score player"><span>You</span><strong id="player-score">0</strong></div>
+        <h2>Congklak</h2>
+        <div class="score granny"><span>Granny</span><strong id="granny-score">0</strong></div>
+      </header>
+      <div id="pit-layer" class="pit-layer" aria-label="Congklak pits"></div>
+      <footer class="turn">
+        <h3 id="turn-title" aria-live="polite">Your turn</h3>
+        <p id="turn-hint">Choose an occupied pit on the near row.</p>
+        <p id="hand-count" hidden></p>
+      </footer>
+    </section>
+    <section id="result" class="result" aria-labelledby="result-title" hidden>
+      <div class="result-card">
+        <h2 id="result-title"></h2>
+        <p id="result-score"></p>
+        <button id="again" class="action" type="button">Play again</button>
+      </div>
+    </section>
+    <p id="error" class="error" role="alert" hidden></p>
+  </main>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
