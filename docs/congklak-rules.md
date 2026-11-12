@@ -1,12 +1,12 @@
-# Congklak: Complete Rules and Playing Guide
+# Congklak Rules in Granny is Watching
 
 **A traditional Indonesian two-player seed-sowing game**  
 **Also known as:** *dakon*, *dhakon*, *congkak* (names vary by region)  
 **Document type:** Detailed, self-contained rules reference  
-**Edition:** Seven-pit, relay-sowing ruleset with documented variations  
+**Edition:** Seven pits per side with five starting seeds per pit\
 **Last prepared:** 12 November 2026
 
-> **Important note on regional rules:** Congklak does not have one universally binding rules authority. Indonesian families, schools, clubs, and regional traditions may differ on which player starts, whether both players begin simultaneously, how a capture works, and when or how a new round starts. **Sections 1–12 define one complete, internally consistent ruleset** you can play immediately. **Section 13 identifies alternative customs** so you can agree on them before playing. Do not mix two incompatible versions unintentionally.
+> **Regional rules.** Indonesian families, schools, clubs, and regions may differ on who starts, how a capture works, and when a new round starts. Sections 1–12 describe the version played in *Granny is Watching*. Section 13 gives context on other customs.
 
 ---
 
@@ -35,22 +35,20 @@
 
 ## 1. At a glance
 
-| Feature | Standard version used in this guide |
+| Feature | Granny is Watching |
 |---|---|
-| Players | Exactly 2 |
+| Players | You and Granny |
 | Board | 14 small pits (7 per player) and 2 large scoring stores |
-| Seeds | 98 total: 7 in each small pit at the start |
+| Seeds | 70 total, with 5 in each small pit at the start |
 | Stores at setup | Empty |
-| First player | Chosen by agreement or a simple draw (*suit*) |
+| First player | You start every round |
 | Direction | Clockwise around the board, **toward your own store** along your own row; skip the opponent's store |
 | Core action | Pick up all seeds from one of your occupied small pits and distribute them one by one |
 | Relay sowing | If the final seed lands in a previously occupied small pit, pick up the resulting contents and keep sowing |
-| Bonus turn | If the final seed lands in your own store |
+| Bonus turn | If the final seed lands in your own store and both rows still contain seeds |
 | Capture (*tembak*) | If the final seed lands in an empty pit on your side and the opposite pit contains seeds |
-| End of one game | Once a player's seven small pits are empty after a completed turn |
+| End of one game | After a move resolves with either row empty |
 | Winner | Player with more seeds in their store after the remaining seeds are collected |
-
-The 7-pit / 98-seed setup is widely described in Indonesian instructional material, including a publication from Indonesia's Ministry of Education and Culture.[1]
 
 ## 2. What Congklak is
 
@@ -65,7 +63,7 @@ Despite its simple physical equipment, Congklak rewards counting, anticipation, 
 You need:
 
 - **One Congklak board** with **two parallel rows of seven small pits** and **one large store at each end** (16 pits in total).
-- **98 small counters**: traditionally seeds, shells, or small stones; identical beads also work.
+- **70 small counters** for this setup. Traditionally players use seeds, shells, or small stones. Identical beads also work.
 - **Two players**, seated on opposite sides of the board.
 
 Each player owns:
@@ -75,11 +73,11 @@ Each player owns:
 
 The large scoring pit is called a **store**, **home**, **house**, *rumah*, or *lumbung*. The small pits may be called **houses**, **fields**, or *lubang kecil*, depending on the speaker and local tradition.
 
-> **For improvised play:** Draw 14 small circles in two rows and one large circle at either end on paper or cardboard. Use 98 dry beans, stones, or counters. If playing with young children, use counters large enough to avoid choking hazards.
+> **For improvised play:** Draw 14 small circles in two rows and one large circle at either end on paper or cardboard. Use 70 dry beans, stones, or counters. If playing with young children, use counters large enough to avoid choking hazards.
 
 ## 4. Board diagram and direction
 
-This diagram is viewed from above. **Player A sits at the bottom. Player B sits at the top.** The pits with the same number face each other. Both players sow clockwise along the indicated ring. Because the players face opposite directions, each player's own store is on their **left**.
+This diagram shows the view from above. **You are Player A at the bottom. Granny is Player B at the top.** The pits with the same number face each other. Both players sow clockwise along the indicated ring. Each player's store is on their **left** when seated. From your view, your store is on the left and Granny's is on the right.
 
 ```text
                         PLAYER B
@@ -114,24 +112,22 @@ Your goal is to place **more seeds into your own store** than your opponent plac
 - Every seed in your store counts as **one point**.
 - A seed entering a store **stays there** for the rest of that game.
 - Seeds still in the small pits are **not yet scored**, except when collected during a capture or the end-of-game sweep.
-- Since the initial game contains 98 seeds, scores after all remaining seeds are collected must sum to **98**.
+- After all remaining seeds are collected, the two scores add up to **70**.
 
-This ruleset allows a **tie**, including a final score of 49–49.
+A final score of **35–35** is a draw.
 
 ## 6. Setup
 
-1. Place the board between the two players so that each person has seven small pits directly in front of them.
-2. Agree which end store belongs to each player. Under this guide's diagram, Player A uses the left store and Player B the right store, viewed from above.
-3. Put **7 seeds into each of the 14 small pits**: `14 × 7 = 98` seeds total.
-4. Leave both large stores **empty**.
-5. Decide who goes first—for example by *suit* (a simple hand-game draw), a coin toss, or mutual agreement.
-6. The selected player begins. **Players take turns, rather than starting simultaneously**, in this main ruleset.
+1. Choose **Wake up**, then **Sit down** when Granny points you to your seat. The camera moves to the overhead board.
+2. Your seven small pits are in the near row and Granny's are in the far row. Your store is on the left and hers is on the right.
+3. The game puts **5 seeds into each of the 14 small pits** for a total of `14 × 5 = 70` and leaves both stores **empty**.
+4. You make the first move. One side sows at a time.
 
 **Initial count:**
 
 ```text
-B STORE: 0   B1 B2 B3 B4 B5 B6 B7: 7 7 7 7 7 7 7
-A STORE: 0   A1 A2 A3 A4 A5 A6 A7: 7 7 7 7 7 7 7
+B STORE: 0   B1 B2 B3 B4 B5 B6 B7: 5 5 5 5 5 5 5
+A STORE: 0   A1 A2 A3 A4 A5 A6 A7: 5 5 5 5 5 5 5
 ```
 
 ## 7. Legal moves and sowing
@@ -140,6 +136,8 @@ A STORE: 0   A1 A2 A3 A4 A5 A6 A7: 7 7 7 7 7 7 7
 
 On your turn, choose **one small pit on your own side** containing at least one seed. You may not begin a move from an opponent's pit, a store, or an empty pit.
 
+Click an occupied pit on the near row or press **1–7** for pits **A1–A7** from left to right. Granny picks a legal pit automatically. Her row and store highlight briefly while she chooses.
+
 ### 7.2 Picking up seeds
 
 Lift **all** seeds from your selected pit into your hand. The chosen pit is now empty. You cannot choose to leave some of its seeds behind.
@@ -147,6 +145,8 @@ Lift **all** seeds from your selected pit into your hand. The chosen pit is now 
 ### 7.3 Distributing seeds (*menabur*)
 
 Starting with the **next** pit along your sowing path, drop **exactly one** seed in each successive eligible pit until your hand is empty.
+
+The game shows the full handful moving between pits. The pit count updates as each seed lands, and the board displays how many seeds remain in hand.
 
 - Include all small pits on both players' sides as you encounter them.
 - Include **your own store** when your sowing path reaches it.
@@ -160,13 +160,7 @@ Check **the exact destination of the last seed** and follow Section 8. A turn ma
 
 ### 7.5 What counts as one turn?
 
-A turn consists of the initial sowing plus every required relay sowing that follows. It ends only when the player:
-
-- Lands the last seed in a previously empty small pit (with capture where permitted); or
-- Completes a sowing in their own store, receives a bonus turn, and then eventually finishes that bonus turn; or
-- Reaches the end-of-game condition.
-
-**For clarity:** Landing in your own store grants a **fresh choice of your own occupied pit**. It is convenient to call that choice a *bonus turn* even though the same person keeps playing.
+A move starts with the choice of a pit and includes all required relays and any capture. After the move resolves, the game checks both rows for the end condition in Section 10. If both rows still contain seeds, the last seed's destination determines who chooses the next pit. Landing in your store gives you a bonus turn. Landing in a previously empty small pit passes play to the other side.
 
 ## 8. Where the last seed lands
 
@@ -175,7 +169,7 @@ Every sowing ends in exactly one of these four situations. **"Empty" and "occupi
 | Last-seed destination | Result |
 |---|---|
 | A **small pit that already held one or more seeds** | **Relay sow:** pick up all seeds now in that pit, including the seed just added, and continue distributing from the *next* pit. This applies on either player's side. |
-| **Your own large store** | **Bonus turn:** leave that seed in your store. Choose any occupied small pit on your side and start a new sowing. |
+| **Your own large store** | Leave the seed in your store. If both rows still contain seeds, take a **bonus turn** and choose any occupied small pit on your side. |
 | A **previously empty small pit on your side** | The sowing stops. Check for a **capture** (*tembak*) using Section 9; whether a capture occurs or not, your turn ends. |
 | A **previously empty small pit on the opponent's side** | Leave your final seed in that pit. Your turn ends; the opponent plays next. No capture. |
 
@@ -198,7 +192,7 @@ If the last seed falls into **your own** store:
 3. Choose **any occupied** pit among them.
 4. Pick up all its seeds and start a new sowing along your normal path.
 
-You can earn multiple bonus turns in succession. If no pit on your side contains seeds, apply the end-of-game rule in Section 10 rather than attempting an illegal move.
+You can earn multiple bonus turns in succession. If either row is empty when a move finishes, the round ends before a bonus turn can begin.
 
 ## 9. Capturing: *tembak*
 
@@ -215,11 +209,9 @@ All of the following must be true:
 
 ### 9.2 Capture procedure in this edition
 
-- Take the **one last seed** just placed into your empty pit.
-- Take **every seed** from the directly opposite opponent pit.
-- Put **all those seeds** into **your own store**.
-- Leave both affected small pits empty.
-- **End your turn.** The opponent plays next, unless the game has ended.
+1. Move **every seed** from the directly opposite pit into the landing pit, where your final seed is waiting.
+2. Move the **combined pile** into **your own store**, leaving both small pits empty.
+3. Your turn ends. If both rows still contain seeds, the opponent plays next.
 
 **Example:** Player A's `A3` is empty, `B3` contains 5, and A finishes by placing one last seed into `A3`. A moves **6 seeds** to A's store: **5 from B3 + the 1 final seed from A3**.
 
@@ -240,9 +232,7 @@ If your final seed lands in an empty pit on your side but the opposite pit is **
 
 ### 10.1 When the game ends
 
-Under this single-game edition, the game ends **after the currently active turn is resolved** if either player has **no seeds in any of their seven small pits**. This avoids ending the game halfway through a player's hand of seeds.
-
-Equivalently: when a player cannot make a legal choice from their own row and the current sowing has finished, there is no further ordinary move to play.
+The game checks for an empty row after all sowing, relays, and any capture from the current move have resolved. If either player has **no seeds in any of their seven small pits**, the round ends before the next move or bonus turn.
 
 ### 10.2 Collect remaining seeds (the sweep)
 
@@ -257,9 +247,9 @@ In the unusual event both rows are already empty, there is nothing to sweep.
 3. The higher count wins.
 4. Equal counts mean a **draw**.
 
-**Score example:** A has 61 seeds and B has 37; `61 + 37 = 98`, so A wins by 24 seeds.
+If you finish with **41** seeds and Granny has **29**, you win by **12**. The two stores account for all **70** seeds.
 
-**Sanity check:** If the two final counts do not add to 98 in the seven-pit setup, search for a misplaced or lost counter before declaring a result.
+The result screen shows both scores. **Play again** resets all 14 small pits to five seeds, empties both stores, and gives you the first move.
 
 > **Not the same as every traditional multi-round game:** Some households distinguish a round ending when one player runs out of playable seeds (*menang jalan*) from ultimately winning by seeds (*menang biji*), then redistribute the seeds for another round. See Section 13 for that style.
 
@@ -269,20 +259,18 @@ These examples use the board numbering in Section 4. Where they describe a posit
 
 ### Example 1: A guaranteed bonus turn from the starting position
 
-From the original setup, `A7` contains exactly **7** seeds. Player A chooses `A7` and distributes one seed to each next destination:
+From the opening setup, `A5` contains **5** seeds. Choosing it gives the following sequence.
 
 ```text
-Pick up: A7 (7 seeds)
-Drop 1: A6
-Drop 2: A5
-Drop 3: A4
-Drop 4: A3
-Drop 5: A2
-Drop 6: A1
-Drop 7: A STORE
+Pick up A5 (5 seeds)
+1. A4
+2. A3
+3. A2
+4. A1
+5. A STORE
 ```
 
-The final seed lands in A's store, so **A earns another turn** and may select any nonempty A pit. A's store now contains at least 1 seed.
+The final seed lands in your store, bringing its score to **1**. You earn another turn and may select any occupied pit on your side.
 
 **Key lesson:** Count how many sowing steps it takes to reach your store.
 
@@ -324,15 +312,15 @@ Opposite B3 seeds          5
 Seeds added to A STORE     6
 ```
 
-`A3` and `B3` are now empty. **A's turn is over.**
+The five seeds from `B3` cross into `A3`, then all six move to A's store. Both small pits are now empty. **A's turn is over.**
 
 ### Example 4: An empty pit with no capture
 
-A's last seed lands in previously empty `A2`, but `B2` is empty as well. Leave the final seed in `A2`; move no seeds to either store; end A's turn. B now plays.
+A's last seed lands in previously empty `A2`, and `B2` is empty as well. The final seed stays in `A2` and A's turn ends. If both rows still contain seeds, B plays next.
 
 ### Example 5: Reaching the final score
 
-After B finishes a turn, all B small pits are empty. A still has 9 seeds scattered among A's small pits. Under the default end rule, A immediately moves those **9** remaining seeds into A's store, and both stores are counted. No additional sowing turns occur.
+After B finishes a move, all B small pits are empty. A still has 9 seeds scattered among A's small pits. The game sweeps those **9** remaining seeds into A's store and counts both stores.
 
 ## 12. Rules clarifications and unusual cases
 
@@ -352,7 +340,7 @@ It receives seeds like any other small pit. The fact that you originally picked 
 Yes. It now contains two; pick up both and continue.
 
 **Does a relay happen if the last seed lands in my own store and the store already had seeds?**  
-No. Stores are not ordinary small pits. Keep the seed there and take a **bonus turn** instead.
+The seed stays in your store. You take a **bonus turn** if both rows still contain seeds.
 
 **Can I choose any pit after a bonus turn?**  
 Any **occupied small pit on your own side**, yes. Not an opponent's pit, an empty pit, or a store.
@@ -373,13 +361,13 @@ Not during the **same game**. A multi-round carryover variant may redistribute t
 No. If you have at least one occupied small pit and it is your turn, you must make a legal move.
 
 **Can I count seeds before choosing?**  
-Yes under this guide. All small-pit contents are public information. In informal play you may agree on a time limit for thinking.
+Yes. Pit and store counts are visible on both sides. Your pit labels sit on the near edge, and Granny's sit on the far edge.
 
 **What if counters are spilled or a sowing error is noticed?**  
 If both players know the last valid position, restore it and replay the move. If not, agree to reconstruct it, restart, or adjudicate fairly. These are suggested etiquette rules, not a universal historical custom.
 
 **How many seeds should be on the board at any moment?**  
-Always **98 total** across both stores, both rows, and any seed temporarily in a player's hand. Sowing and capturing do not create or destroy seeds.
+The **70 seeds** are always accounted for across both rows, both stores, and any seeds in hand or in transit.
 
 ## 13. Regional and house-rule variations
 
@@ -387,8 +375,7 @@ Always **98 total** across both stores, both rows, and any seed temporarily in a
 
 ### 13.1 Who starts?
 
-**Default in this document:** One player wins a draw and begins; the other waits.  
-**Documented alternative:** Some local games have both players start sowing simultaneously. This is mentioned by Indonesian guides and local descriptions of *dakon/congklak*.[2][5]
+In *Granny is Watching*, you always make the first move. Some tabletop games use *suit*, a hand-game draw, to choose the starting player.[1] Other local games have both players start sowing simultaneously.[2][5]
 
 If using a simultaneous start, agree on how to resolve simultaneous access to the same pit and when to switch to alternating play. A straightforward formal game is easier to administer with sequential turns.
 
@@ -437,7 +424,9 @@ A distinct **burned/inactive-house** tradition regards some unrefillable pits as
 
 **Practical recommendation:** For a first game or a classroom demonstration, play Sections 1–12 as one complete game. Introduce multi-round *ngacang* only if both players have an agreed reference or a familiar local custom that specifies exactly how special pits function.
 
-### 13.7 Smaller or larger boards
+### 13.7 Board sizes and starting seed counts
+
+The 16-hole, 98-seed setup uses seven starting seeds in each small pit. It is described in Indonesian instructional material, including a publication from Indonesia's Ministry of Education and Culture.[1]
 
 Boards with a different number of small pits exist. For casual adaptation, one simple convention is to put as many seeds in each small pit as the number of small pits in each row: for example, a five-pit board would start with `2 × 5 × 5 = 50` seeds. This is a **setup convention**, not a universal requirement; always agree on the initial number and the rules for captures and stores.
 
@@ -447,7 +436,7 @@ Some apps or organized play formats add match points, fixed thinking times, or p
 
 ## 14. Playing multiple games and tournaments
 
-For a simple social match that avoids protected-pit complications, play a series of **fresh, independent games**, each reset to 7 seeds in all 14 small pits:
+In *Granny is Watching*, each replay is a fresh 70-seed round. For tabletop play, the following match formats can use the same five-seed setup.
 
 - **Best of three:** First player to win two games wins the match; if games can draw, agree how ties affect the count.
 - **Three-game points format:** Award **2 match points for a win, 1 each for a draw, 0 for a loss**. Higher total wins.
@@ -467,7 +456,7 @@ For organized play, record the following in advance: sowing path; capture method
 6. **Keep a running store count.** Stores are already scored; seeds in small pits remain in circulation.
 7. **Think beyond one move.** When choosing between two legal starts, compare their likely relay endings, captures, and bonus-turn possibilities.
 
-**Beginner exercise:** From a fresh starting board, have Player A find a move that places its seventh seed directly into A's store. Then replay with a different starting pit and predict whether the last seed triggers a relay.
+**Beginner exercise.** From a fresh starting board, find a pit whose fifth seed lands in your store. Then replay with a different starting pit and predict whether the last seed triggers a relay.
 
 ## 16. Glossary
 
@@ -492,48 +481,44 @@ For organized play, record the following in advance: sowing path; capture method
 ## 17. Quick-reference sheet
 
 ```text
-CONGKLAK — ONE-GAME RULES (7 SMALL PITS EACH)
+CONGKLAK IN GRANNY IS WATCHING
 
 SETUP
-  2 players; 14 small pits; 2 large stores.
-  Put 7 seeds in EACH small pit = 98 total.
-  Leave stores empty. Decide who begins.
+  7 small pits per side and 2 large stores.
+  5 seeds in each small pit, 70 total.
+  Both stores start empty. You play first.
 
 YOUR TURN
-  1. Pick any OCCUPIED small pit on YOUR row.
+  1. Click an OCCUPIED pit on YOUR row or press 1–7.
   2. Pick up ALL its seeds.
-  3. Sow 1 per next pit, following the agreed path.
+  3. Sow 1 in each successive pit clockwise.
   4. Include YOUR store; SKIP opponent's store.
 
 WHEN YOUR LAST SEED LANDS...
   - In an OCCUPIED SMALL PIT:
       Pick up all seeds now there; keep sowing.
   - In YOUR STORE:
-      Bonus turn; choose any occupied pit on your row.
+      If both rows still have seeds, choose another occupied pit.
   - In an EMPTY PIT ON YOUR ROW:
-      If opposite pit has seeds, capture its seeds
-      AND your final seed into your store.
+      If the opposite pit has seeds, move them into your
+      landing pit, then move the combined pile to your store.
       Otherwise leave your final seed there.
       Either way, your turn ends.
   - In an EMPTY PIT ON OPPONENT'S ROW:
       Leave the seed there; your turn ends.
 
 FINISH
-  After a completed turn, if either row is empty:
-  sweep seeds remaining on the other row into that
-  player's store. Count stores. Most seeds wins.
-  A tie is possible. Final store counts add to 98.
-
-BEFORE PLAYING A LOCAL VARIANT, AGREE ON:
-  capture method, full-circuit condition, whether
-  starts are simultaneous, and multi-round rules.
+  After a move resolves, an empty row ends the round.
+  Sweep any remaining seeds into their owner's store.
+  Most seeds wins. A 35–35 score is a draw.
+  Play again resets the board and gives you the first move.
 ```
 
 ---
 
 ## 18. Sources and further reading
 
-This guide is a **synthesis**, not a claim of a single official nationwide rulebook. Sources support both the shared mechanics and the fact that household/region-specific differences exist.
+These sources describe the shared mechanics and regional customs that informed the game's rules.
 
 1. **Indonesian Ministry of Education and Culture, Language Development and Fostering Agency (2018).** Andreas Supriyono, *Serunya Permainan Tradisional Anak Zaman Dulu*, pp. 21–24, section “Congklak.” Covers the 16-hole/98-seed setup, first-player draw, sowing, relay, stores, and scoring. [Read the government-hosted PDF](https://badanbahasa.kemendikdasmen.go.id/resource/doc/files/Serunya_Permainan_Tradisional_Anak_Zaman_Dulu_0.pdf).
 2. **IndoBoardGames, “Cara main Congklak.”** Indonesian guide explaining sowing, store skips, relay sowing, captures, and some house-rule differences. [Read the guide](https://indoboardgames.com/cara-main/congklak).

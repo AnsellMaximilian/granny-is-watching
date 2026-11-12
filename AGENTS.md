@@ -11,3 +11,7 @@ The game is called "Granny is Watching". The theme of the setting and the main h
 - Story: `docs/story.md`
 - Reference images: `docs/reference-images/`
 
+## Congklak documentation
+
+When changing congklak gameplay, update `docs/congklak-rules.md` in the same patch. Check the setup, turn rules, controls, examples, and scoring against `src/congklak.js` and the behavior players see in the game.
+
