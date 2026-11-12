@@ -10,7 +10,7 @@ export const STORES = [7, 15];
 const CLOCKWISE = [6, 5, 4, 3, 2, 1, 0, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
 export function newGame() {
-  const pits = Array(16).fill(7);
+  const pits = Array(16).fill(5);
   for (const store of STORES) pits[store] = 0;
   return { pits, turn: PLAYER, outcome: null };
 }

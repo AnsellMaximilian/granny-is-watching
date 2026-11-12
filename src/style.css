@@ -141,7 +141,9 @@ button.pit-count:not(:disabled) { border-color: #f0bc7670; }
 button.pit-count:not(:disabled) span { border-color: #f0bc76; color: #ffe0ac; }
 button.pit-count:hover, button.pit-count:focus-visible { background: #ffbc6e25; border-color: #ffdb9d; }
 .pit-count.active span { color: #1b100a !important; background: var(--gold); }
-.pit-count.store { align-items: end; padding-bottom: 0.6rem; }
+.pit-count.granny-side { align-items: start; }
+.pit-count.store { padding-bottom: 0.6rem; }
+.pit-count.store.granny-side { padding-block: 0.6rem 0; }
 .turn {
   position: absolute;
   bottom: clamp(18px, 6vh, 70px);

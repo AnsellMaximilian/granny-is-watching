@@ -99,7 +99,9 @@ async function launch() {
   const layer = $('pit-layer');
   const counts = PITS.map((_, i) => {
     const element = document.createElement(ROWS[PLAYER].includes(i) ? 'button' : 'div');
-    element.className = 'pit-count' + (STORES.includes(i) ? ' store' : '');
+    element.className = 'pit-count';
+    element.classList.toggle('store', STORES.includes(i));
+    element.classList.toggle('granny-side', ROWS[GRANNY].includes(i) || i === STORES[GRANNY]);
     const label = document.createElement('span');
     element.append(label);
     layer.append(element);
@@ -194,9 +196,10 @@ async function launch() {
   function endMatch() {
     updatePitButtons();
     const title = { win: 'You win', loss: 'Granny wins', draw: 'A draw' }[game.outcome];
-    status(title, 'All 98 seeds have been scored.');
+    const [playerScore, grannyScore] = STORES.map((pit) => game.pits[pit]);
+    status(title, 'All ' + (playerScore + grannyScore) + ' seeds have been scored.');
     $('result-title').textContent = title;
-    $('result-score').textContent = 'You ' + game.pits[STORES[PLAYER]] + ' · Granny ' + game.pits[STORES[GRANNY]];
+    $('result-score').textContent = 'You ' + playerScore + ' · Granny ' + grannyScore;
     $('result').hidden = false;
     again.focus();
   }
