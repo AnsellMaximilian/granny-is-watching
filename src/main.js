@@ -73,7 +73,7 @@ async function launch() {
   glow.intensity = 0.48;
   for (const flame of room.flames) glow.addIncludedOnlyMesh(flame);
   let game = newGame();
-  const board = buildBoard(scene, game.pits);
+  const board = buildBoard(scene, game.pits, reducedMotion);
 
   RegisterSceneLoaderPlugin(new GLTFFileLoader());
   const granny = await LoadAssetContainerAsync(modelUrl, scene);
@@ -95,8 +95,7 @@ async function launch() {
   let phase = 'title';
   let phaseStart = performance.now();
   let busy = false;
-  let activePit = -1;
-  let displayed = [...game.pits];
+  const displayed = [...game.pits];
   const layer = $('pit-layer');
   const counts = PITS.map((_, i) => {
     const element = document.createElement(ROWS[PLAYER].includes(i) ? 'button' : 'div');
@@ -142,9 +141,8 @@ async function launch() {
     }
   }
 
-  function setCount(pit, count) {
+  function showCount(pit, count) {
     displayed[pit] = count;
-    board.setCount(pit, count);
     const { element, label } = counts[pit];
     label.textContent = count;
     const column = ROWS[PLAYER].indexOf(pit);
@@ -157,11 +155,11 @@ async function launch() {
     $('granny-score').textContent = displayed[STORES[GRANNY]];
   }
 
-  function mark(pit = -1) {
-    counts[activePit]?.element.classList.remove('active');
-    counts[pit]?.element.classList.add('active');
-    activePit = pit;
-    board.mark(pit);
+  function mark(...pits) {
+    for (const [index, { element }] of counts.entries()) {
+      element.classList.toggle('active', pits.includes(index));
+    }
+    board.mark(pits);
   }
 
   function updatePitButtons() {
@@ -174,15 +172,15 @@ async function launch() {
     $('turn-hint').textContent = hint;
   }
 
-  function showHand(seeds) {
+  function showHand(seeds, location = 'in hand') {
     handCount.hidden = seeds === undefined;
-    if (!handCount.hidden) handCount.textContent = seeds + (seeds === 1 ? ' seed in hand' : ' seeds in hand');
+    if (!handCount.hidden) handCount.textContent = seeds + (seeds === 1 ? ' seed ' : ' seeds ') + location;
   }
 
   function enterMatch() {
     game = newGame();
-    board.clear();
-    game.pits.forEach((count, pit) => setCount(pit, count));
+    board.reset(game.pits);
+    game.pits.forEach((count, pit) => showCount(pit, count));
     mark();
     busy = false;
     phase = 'game';
@@ -203,35 +201,57 @@ async function launch() {
     again.focus();
   }
 
+  async function animateTransfer(step, mover, captured) {
+    const { kind, pit, count, emptied } = step;
+    const sources = emptied.filter((source) => displayed[source] > 0);
+    if (kind === 'sweep') {
+      status('The round is over', 'The remaining seeds go to their owner’s store.');
+    } else {
+      const title = mover === PLAYER ? 'You capture ' + captured : 'Granny captures ' + captured;
+      status(title, kind === 'capture' ? 'Seeds from the opposite pit cross the board.'
+        : 'The captured pile goes into the store.');
+    }
+    showHand();
+    mark(...sources, pit);
+    await wait(kind === 'bank' ? 280 : 400);
+    const inTransit = sources.reduce((sum, source) => sum + displayed[source], 0);
+    for (const source of sources) showCount(source, 0);
+    showHand(inTransit, 'in transit');
+    await board.transfer(sources, pit, kind === 'capture' ? 900 : 1100);
+    showCount(pit, count);
+    showHand();
+    mark(pit);
+    await wait(kind === 'capture' ? 650 : 700);
+  }
+
   async function animateMove(pit) {
     const mover = game.turn;
     const move = playMove(game, pit);
     const drops = move.steps.filter((step) => step.kind === 'drop').length;
-    const flightMs = Math.max(180, 300 - 5 * Math.max(0, drops - 12));
+    const dropMs = Math.max(260, 500 - 8 * Math.max(0, drops - 12));
     const sowing = mover === PLAYER ? 'You’re sowing' : 'Granny is sowing';
-    let previous = move.steps[0];
     status(sowing, 'Seeds travel clockwise around the board.');
     for (const step of move.steps) {
-      if (step.kind === 'lift') {
-        mark(step.pit);
-        if (step !== move.steps[0]) status(sowing, 'An occupied pit started a relay. Sowing continues from there.');
-        await wait(330);
+      switch (step.kind) {
+        case 'lift':
+          mark(step.pit);
+          if (step !== move.steps[0]) status(sowing, 'An occupied pit started a relay. Sowing continues from there.');
+          await wait(280);
+          showCount(step.pit, 0);
+          showHand(step.hand);
+          await board.lift(step.pit, 400);
+          await wait(210);
+          break;
+        case 'drop':
+          await board.drop(step.pit, dropMs);
+          showCount(step.pit, step.count);
+          mark(step.pit);
+          showHand(step.hand);
+          await wait(dropMs * 0.18);
+          break;
+        default:
+          await animateTransfer(step, mover, move.captured);
       }
-      if (step.kind === 'drop') {
-        if (reducedMotion) {
-          await wait(flightMs);
-        } else {
-          await board.flySeed(previous.pit, step.pit, flightMs, previous.kind === 'lift');
-        }
-      }
-      step.emptied?.forEach((emptied) => setCount(emptied, 0));
-      setCount(step.pit, step.count);
-      mark(step.pit);
-      showHand(step.hand);
-      if (step.kind === 'capture') status(mover === PLAYER ? 'You capture ' + step.captured : 'Granny captures ' + step.captured, 'Tembak adds both pits to the store.');
-      if (step.kind === 'sweep') status('The round is over', 'The remaining seeds go to their owner’s store.');
-      if (step.kind !== 'lift') await wait(step.kind === 'drop' ? 65 : 780);
-      previous = step;
     }
     game = move.game;
     showHand();
@@ -247,10 +267,12 @@ async function launch() {
     busy = true;
     updatePitButtons();
     const move = await animateMove(pit);
-    if (game.turn === GRANNY && !game.outcome) status('Granny’s turn', 'She’s choosing a pit.');
+    let grannyBonus = false;
     while (game.turn === GRANNY && !game.outcome) {
-      await wait(reducedMotion ? 220 : 510);
-      await animateMove(chooseGrannyPit(game));
+      status('Granny is thinking', grannyBonus ? 'She earned another turn.' : 'She’s choosing a pit.');
+      mark(...ROWS[GRANNY], STORES[GRANNY]);
+      await wait(1100);
+      grannyBonus = (await animateMove(chooseGrannyPit(game))).bonus;
     }
     busy = false;
     if (game.outcome) {

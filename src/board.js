@@ -117,7 +117,7 @@ function buildWood(scene, root) {
   }
 }
 
-export function buildBoard(scene, initialCounts) {
+export function buildBoard(scene, initialCounts, reducedMotion) {
   const root = new TransformNode('Congklak board', scene);
   buildWood(scene, root);
   const shellMaterial = material(scene, 'Ivory cowrie shell', '#edd1a0');
@@ -136,17 +136,17 @@ export function buildBoard(scene, initialCounts) {
   const seam = sphere(scene, root, 'Seam source', seamMaterial, 0, -5, 0, 0.024, 0.002, 0.004, 5);
   const total = initialCounts.reduce((sum, count) => sum + count, 0);
   const shells = PITS.map(() => []);
-  const available = Array.from({ length: total }, (_, index) => {
+  const hand = [];
+  const cowries = Array.from({ length: total }, (_, index) => {
     const parts = [shell.createInstance('Cowrie ' + index), seam.createInstance('Cowrie seam ' + index)];
     for (const part of parts) {
       part.parent = root;
       part.isPickable = false;
-      part.setEnabled(false);
     }
     return parts;
   });
 
-  function shellPose(pit, index) {
+  function pitPose(pit, index) {
     const { x, z, rx, rz } = PITS[pit];
     const layerSize = STORES.includes(pit) ? 32 : 18;
     const angle = index * 2.399963 + pit * 0.71;
@@ -159,50 +159,67 @@ export function buildBoard(scene, initialCounts) {
     };
   }
 
-  function placeShell(parts, { x, y, z, angle }, scale = 1) {
+  function handPose(pit, index) {
+    const { x, z } = PITS[pit];
+    const angle = index * 2.399963;
+    const radius = 0.026 * Math.sqrt(index + 0.25);
+    return {
+      x: Math.max(-0.95, Math.min(0.95, x)) + Math.cos(angle) * radius,
+      y: BOARD_TOP + 0.165,
+      z: z * 0.11 + Math.sin(angle) * radius * 0.9,
+      angle: angle * 1.87,
+    };
+  }
+
+  function placeShell(parts, { x, y, z, angle }) {
     for (const [index, part] of parts.entries()) {
-      part.position.set(x, y + index * 0.0085 * scale, z);
+      part.position.set(x, y + index * 0.0085, z);
       part.rotation.y = angle;
-      part.scaling.setAll(scale);
-      part.setEnabled(true);
     }
   }
 
-  function setCount(pit, count) {
-    const contents = shells[pit];
-    while (contents.length > count) {
-      const parts = contents.pop();
-      for (const part of parts) part.setEnabled(false);
-      available.push(parts);
-    }
-    while (contents.length < count) {
-      const parts = available.pop();
-      placeShell(parts, shellPose(pit, contents.length));
-      contents.push(parts);
+  function reset(counts) {
+    hand.length = 0;
+    let index = 0;
+    for (const [pit, count] of counts.entries()) {
+      const contents = shells[pit];
+      contents.length = 0;
+      for (let slot = 0; slot < count; slot++) {
+        const parts = cowries[index++];
+        placeShell(parts, pitPose(pit, slot));
+        contents.push(parts);
+      }
     }
   }
 
-  function flySeed(from, to, ms, fromBowl) {
-    const landing = shellPose(to, shells[to].length);
-    const source = fromBowl ? shellPose(from, 0)
-      : { ...PITS[from], y: BOARD_TOP + 0.046, angle: landing.angle - Math.PI };
-    const height = Math.max(0.21, BOARD_TOP + 0.19 - (source.y + landing.y) / 2);
-    const angleDifference = landing.angle - source.angle;
-    const turn = Math.atan2(Math.sin(angleDifference), Math.cos(angleDifference));
-    // setCount takes this same cowrie from the pool when it lands.
-    const parts = available.at(-1);
+  function moveShells(pile, destination, ms, height = 0) {
+    const paths = pile.map((parts, index) => {
+      const { x, y, z } = parts[0].position;
+      const angle = parts[0].rotation.y;
+      const end = destination(index);
+      const rotation = end.angle - angle;
+      return { parts, x, y, z, angle, end, turn: Math.atan2(Math.sin(rotation), Math.cos(rotation)) };
+    });
+    if (reducedMotion) {
+      return new Promise((resolve) => setTimeout(() => {
+        for (const { parts, end } of paths) placeShell(parts, end);
+        resolve();
+      }, ms));
+    }
     const start = performance.now();
     return new Promise((resolve) => {
       const flight = scene.onBeforeRenderObservable.add(() => {
         const t = Math.min(1, (performance.now() - start) / ms);
         const travel = t * t * (3 - 2 * t);
-        const arc = 4 * t * (1 - t);
-        placeShell(parts, {
-          x: source.x + (landing.x - source.x) * travel,
-          y: source.y + (landing.y - source.y) * t + height * arc,
-          z: source.z + (landing.z - source.z) * travel,
-          angle: source.angle + turn * travel,
-        }, 1 + 0.25 * arc);
+        const arc = height * 4 * t * (1 - t);
+        for (const { parts, x, y, z, angle, end, turn } of paths) {
+          placeShell(parts, {
+            x: x + (end.x - x) * travel,
+            y: y + (end.y - y) * travel + arc,
+            z: z + (end.z - z) * travel,
+            angle: angle + turn * travel,
+          });
+        }
         if (t === 1) {
           scene.onBeforeRenderObservable.remove(flight);
           resolve();
@@ -211,19 +228,28 @@ export function buildBoard(scene, initialCounts) {
     });
   }
 
-  initialCounts.forEach((count, pit) => setCount(pit, count));
-  let selected = -1;
+  reset(initialCounts);
   return {
-    flySeed,
-    setCount,
-    clear() {
-      for (const pit of PITS.keys()) setCount(pit, 0);
+    reset,
+    lift(pit, ms) {
+      hand.push(...shells[pit].splice(0));
+      return moveShells(hand, (index) => handPose(pit, index), ms, 0.035);
     },
-    mark(pit) {
-      if (selected === pit) return;
-      markers[selected]?.setEnabled(false);
-      markers[pit]?.setEnabled(true);
-      selected = pit;
+    async drop(pit, ms) {
+      await moveShells(hand, (index) => handPose(pit, index), ms * 0.55);
+      const seed = hand.pop();
+      const contents = shells[pit];
+      await moveShells([seed], () => pitPose(pit, contents.length), ms * 0.45);
+      contents.push(seed);
+    },
+    async transfer(sources, pit, ms) {
+      const pile = sources.flatMap((source) => shells[source].splice(0));
+      const contents = shells[pit];
+      await moveShells(pile, (index) => pitPose(pit, contents.length + index), ms, 0.23);
+      contents.push(...pile);
+    },
+    mark(pits) {
+      for (const [index, marker] of markers.entries()) marker.setEnabled(pits.includes(index));
     },
   };
 }

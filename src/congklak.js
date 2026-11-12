@@ -60,10 +60,11 @@ export function playMove(game, source) {
     const opposite = ROWS[opponent][column];
     if (pits[opposite] > 0) {
       captured = pits[opposite] + 1;
+      steps.push({ kind: 'capture', pit: landing, count: captured, emptied: [opposite] });
       pits[landing] = 0;
       pits[opposite] = 0;
       pits[store] += captured;
-      steps.push({ kind: 'capture', pit: store, count: pits[store], emptied: [landing, opposite], captured });
+      steps.push({ kind: 'bank', pit: store, count: pits[store], emptied: [landing] });
     }
   }
 

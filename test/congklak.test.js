@@ -31,11 +31,24 @@ test('relay continues with every seed in the occupied landing pit', () => {
 });
 
 test('tembak transfers both the final seed and its directly opposite seeds', () => {
-  const { game, captured } = playMove(position({ 0: 2, 3: 1, 8: 3, 10: 5 }), 3);
+  const { game, captured, steps } = playMove(position({ 0: 2, 3: 1, 7: 9, 8: 3, 10: 5 }), 3);
   assert.equal(captured, 6);
-  assert.equal(game.pits[7], 6);
+  assert.deepEqual(steps.slice(-2), [
+    { kind: 'capture', pit: 2, count: 6, emptied: [10] },
+    { kind: 'bank', pit: 7, count: 15, emptied: [2] },
+  ]);
+  assert.equal(game.pits[7], 15);
   assert.equal(game.pits[2], 0);
   assert.equal(game.pits[10], 0);
+});
+
+test('Granny collects across the board and banks the pile on her side', () => {
+  const { game, steps } = playMove(position({ 0: 2, 4: 3, 11: 1, 14: 2, 15: 6 }, GRANNY), 11);
+  assert.deepEqual(steps.slice(-2), [
+    { kind: 'capture', pit: 12, count: 4, emptied: [4] },
+    { kind: 'bank', pit: 15, count: 10, emptied: [12] },
+  ]);
+  assert.equal(game.pits[STORES[GRANNY]], 10);
 });
 
 test('the opponent’s store is skipped from both directions', () => {
