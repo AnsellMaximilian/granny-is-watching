@@ -18,6 +18,26 @@ main, #scene, .lens { position: absolute; inset: 0; width: 100%; height: 100%; }
 [hidden] { display: none !important; }
 button { font: inherit; }
 button:focus-visible { outline: 2px solid #ffe0a8; outline-offset: 4px; }
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.ending-shade {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: #0c0807;
+  opacity: 0;
+  transition: opacity 540ms ease-in;
+}
+.ending-shade.dark { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .ending-shade { transition: none; } }
 
 .lens {
   pointer-events: none;
@@ -133,6 +153,40 @@ button:focus-visible { outline: 2px solid #ffe0a8; outline-offset: 4px; }
 .score.player { color: #ffcf8b; }
 .score.granny { color: #e0c7b1; flex-direction: row-reverse; }
 .pit-layer { position: absolute; inset: 0; }
+.rulebook-button {
+  position: absolute;
+  translate: -50% -50%;
+  display: grid;
+  place-items: end center;
+  padding: 0;
+  border: 1px solid #dfb17c65;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: 1;
+}
+.rulebook-button span {
+  translate: 0 65%;
+  padding: 2px 5px;
+  font-size: clamp(0.69rem, 1.4vw, 0.88rem);
+  background: #20130ff0;
+  border: 1px solid #a3714580;
+}
+.rulebook-button:hover { background: #ffbc6e35; border-color: #f1c087; }
+.rulebook-button:disabled { opacity: 0.55; pointer-events: none; }
+.book-reader {
+  position: absolute;
+  inset: auto 0 clamp(16px, 4vh, 48px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: clamp(7px, 1.5vw, 18px);
+}
+.book-reader .action { min-width: auto; padding-inline: clamp(12px, 2vw, 25px); }
+.book-reader .action:disabled { opacity: 0.55; }
+.book-page { color: var(--muted); text-shadow: 0 2px 6px #0a0706; white-space: nowrap; }
 .pit-count {
   position: absolute;
   translate: -50% -50%;

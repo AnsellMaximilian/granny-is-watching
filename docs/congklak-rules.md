@@ -252,11 +252,11 @@ In the opening round, if you finish with **31** seeds and Granny has **17**, you
 
 ### 10.4 Between rounds
 
-- **Win:** Granny asks which pit to burn from across the table. Select **Choose a pit**, then choose one unburned small pit on either side. After it burns and Granny comments, select **Next round**. Each playable pit starts with four seeds and the stores start empty. Both sides skip burned pits. If either row has zero playable pits after the burn, **Continue** shows the final result.
+- **Win:** Granny asks which pit to burn from across the table. Select **Choose a pit**, then choose one unburned small pit on either side. After it burns and Granny comments, select **Next round** if the run continues. Each playable pit starts with four seeds and the stores start empty. Both sides skip burned pits.
 - **Draw:** Choose **Replay round** to reset the seeds with the same burned pits.
 - **Loss:** Granny lunges into a close stare and the game shows **Game over**. **Start a new run** restores the original board and returns to the wake-up scene.
 
-See [core gameplay](core-game.md) for the full run flow.
+The rulebook on the table includes a four-dot clue on its last page. Burn exactly the four marked pits in any order for the true ending. Burning all of Granny's pits gives the false ending. Burning the last playable pit on your side ends the run in defeat. Select **Continue** after Granny's remark to see the ending. See [core gameplay](core-game.md) for the full run flow.
 
 > **Not the same as every traditional multi-round game:** Some households distinguish a round ending when one player runs out of playable seeds (*menang jalan*) from ultimately winning by seeds (*menang biji*), then redistribute the seeds for another round. See Section 13 for that style.
 
@@ -518,7 +518,9 @@ FINISH
   Sweep any remaining seeds into their owner's store.
   Most seeds wins. Equal scores are a draw.
   Win: Burn one small pit. Both sides skip it in future rounds.
-  If either row has no playable pits after the burn, you complete the run.
+  Read the rulebook for the four-mark ending.
+  Burning Granny’s entire row gives the false ending.
+  Burning your entire row ends the run in defeat.
   Draw: Replay with the same burned pits.
   Loss: Granny stares you down. Start a new run to reset the board.
 ```

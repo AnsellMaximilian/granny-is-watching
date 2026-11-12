@@ -13,7 +13,7 @@ npm start
 
 Choose **Wake up**, then **Sit down**. On your turn, click an occupied pit on the near row or press **1–6** from left to right. Your store is on the left. A round ends when either row empties after sowing resolves.
 
-Each side starts with six small pits and four seeds in each pit, for 48 seeds total. Win to burn one pit for the rest of the run. Draw to replay the same board. Lose and Granny lunges into a close stare before game over. See [core gameplay](docs/core-game.md) and the [congklak rules](docs/congklak-rules.md).
+Each side starts with six small pits and four seeds in each pit, for 48 seeds total. Win to burn one pit for the rest of the run. Draw to replay the same board. Lose and Granny lunges into a close stare before game over. Click the rulebook on the table to read the rules and find its final clue. See [core gameplay](docs/core-game.md) and the [congklak rules](docs/congklak-rules.md).
 
 ## Develop
 

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { GRANNY, PLAYER, ROWS, STORES, burnablePits, burnPit, chooseGrannyPit, legalPits, newGame, playMove } from '../src/congklak.js';
+import { ESCAPE_PATTERN, GRANNY, PLAYER, ROWS, STORES, burnablePits, burnPit, chooseGrannyPit, legalPits, newGame, playMove } from '../src/congklak.js';
 
 const [A1, A2, A3, A4, A5, A6] = ROWS[PLAYER];
 const [B1, B2, B3, B4, B5, B6] = ROWS[GRANNY];
@@ -90,8 +90,8 @@ test('a win lets the player burn one open pit on either side for the next round'
   for (const outcome of [null, 'draw', 'loss']) {
     assert.throws(() => burnPit({ ...game, outcome }, B4), RangeError);
   }
-  const { burned, complete } = burnPit(game, B4);
-  assert.equal(complete, false);
+  const { burned, ending } = burnPit(game, B4);
+  assert.equal(ending, null);
   assert.deepEqual(game.burned, [A2]);
   const next = newGame(burned);
   assert.deepEqual(next.burned, [A2, B4]);
@@ -117,9 +117,22 @@ test('both sowing paths skip burned pits and a burned opposite pit cannot be cap
   assert.equal(final.game.pits[B3], 0);
 });
 
-test('burning the last playable pit on a side completes the run', () => {
-  const game = { ...newGame(ROWS[GRANNY].slice(0, -1)), outcome: 'win' };
-  assert.equal(burnPit(game, B6).complete, true);
+test('the exact four book marks unlock the true ending in any order', () => {
+  assert.deepEqual(ESCAPE_PATTERN, [B2, B5, A1, A4]);
+  for (const last of ESCAPE_PATTERN) {
+    const game = { ...newGame(ESCAPE_PATTERN.filter((pit) => pit !== last)), outcome: 'win' };
+    assert.equal(burnPit(game, last).ending, 'true');
+    assert.equal(burnPit({ ...game, burned: [...game.burned, B1] }, last).ending, null);
+  }
+  const almost = { ...newGame([B2, B5, A1]), outcome: 'win' };
+  assert.equal(burnPit(almost, A2).ending, null);
+});
+
+test('burning all of Granny’s pits gives the false ending and burning your own row gives game over', () => {
+  const herRow = { ...newGame(ROWS[GRANNY].slice(0, -1)), outcome: 'win' };
+  assert.equal(burnPit(herRow, B6).ending, 'false');
+  const ownRow = { ...newGame(ROWS[PLAYER].slice(0, -1)), outcome: 'win' };
+  assert.equal(burnPit(ownRow, A6).ending, 'no-ground');
 });
 
 test('full rounds preserve all seeds in every animation step and reach both outcomes', () => {

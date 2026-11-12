@@ -12,6 +12,7 @@ import { buildRoom } from './room.js';
 import { BOARD_TOP, PITS, buildBoard } from './board.js';
 import { PLAYER, GRANNY, ROWS, STORES, burnablePits, burnPit, chooseGrannyPit, legalPits, newGame, playMove } from './congklak.js';
 import { BURN_DIALOGUE } from './burn-dialogue.js';
+import { buildRulebook } from './rulebook.js';
 
 const $ = (id) => document.getElementById(id);
 const wake = $('wake');
@@ -21,6 +22,11 @@ const match = $('match');
 const result = $('result');
 const dialogue = $('burn-dialogue');
 const dialogueButton = $('dialogue-continue');
+const rulebookButton = $('rulebook-button');
+const reader = $('book-reader');
+const bookPrevious = $('book-previous');
+const bookNext = $('book-next');
+const bookClose = $('book-close');
 const canvas = $('scene');
 const handCount = $('hand-count');
 const PIT_CHOICE_HINT = 'Choose an occupied pit on the near row. You can also press 1–' + ROWS[PLAYER].length + '.';
@@ -74,7 +80,9 @@ async function launch() {
   const camera = new FreeCamera('First-person camera', Vector3.Zero(), scene);
   camera.minZ = 0.045;
   camera.maxZ = 22;
+  const aspect = () => canvas.clientWidth / Math.max(canvas.clientHeight, 1);
   const room = buildRoom(scene);
+  const rulebook = buildRulebook(scene, camera, aspect, reducedMotion);
   const glow = new GlowLayer('Candle bloom', scene, { mainTextureFixedSize: 256, blurKernelSize: 42 });
   glow.intensity = 0.48;
   for (const flame of room.flames) glow.addIncludedOnlyMesh(flame);
@@ -107,6 +115,9 @@ async function launch() {
   let stare;
   let tableShot;
   let burnLine;
+  let readerSpread = 0;
+  let readerBusy = false;
+  let resumePhase;
   const displayed = [...game.pits];
   const layer = $('pit-layer');
   const counts = PITS.map((_, i) => {
@@ -153,10 +164,9 @@ async function launch() {
   }
 
   function overheadPose() {
-    const aspect = canvas.clientWidth / Math.max(canvas.clientHeight, 1);
     // Keep the camera below the rafters and fit narrow windows with the lens.
     const height = 1.65;
-    const fov = 2 * Math.atan(Math.max(1.18, 2.82 / aspect) / (2 * height));
+    const fov = 2 * Math.atan(Math.max(1.18, 2.82 / aspect()) / (2 * height));
     return { position: [0, BOARD_TOP + height, 0.045], target: [0, BOARD_TOP, 0], roll: 0, fov };
   }
 
@@ -201,7 +211,8 @@ async function launch() {
   function layOutPits() {
     const viewport = camera.viewport.toGlobal(canvas.clientWidth, canvas.clientHeight);
     const transform = scene.getTransformMatrix();
-    const project = (x, z) => Vector3.Project(new Vector3(x, BOARD_TOP, z), Matrix.IdentityReadOnly, transform, viewport);
+    const projectPoint = (x, y, z) => Vector3.Project(new Vector3(x, y, z), Matrix.IdentityReadOnly, transform, viewport);
+    const project = (x, z) => projectPoint(x, BOARD_TOP, z);
     for (const [i, pit] of PITS.entries()) {
       const center = project(pit.x, pit.z);
       const { element } = counts[i];
@@ -210,6 +221,12 @@ async function launch() {
       element.style.width = (project(pit.x + pit.rx, pit.z).x - project(pit.x - pit.rx, pit.z).x) + 'px';
       element.style.height = Math.abs(project(pit.x, pit.z + pit.rz).y - project(pit.x, pit.z - pit.rz).y) + 'px';
     }
+    const { x, y, z } = rulebook.tableCenter;
+    const center = projectPoint(x, y, z);
+    rulebookButton.style.left = center.x + 'px';
+    rulebookButton.style.top = center.y + 'px';
+    rulebookButton.style.width = Math.max(42, projectPoint(x + 0.125, y, z).x - projectPoint(x - 0.125, y, z).x) + 'px';
+    rulebookButton.style.height = Math.max(42, Math.abs(projectPoint(x, y, z + 0.17).y - projectPoint(x, y, z - 0.17).y)) + 'px';
   }
 
   function pitName(pit) {
@@ -249,6 +266,57 @@ async function launch() {
       element.classList.toggle('burnable', burnable);
       if (burnable) element.setAttribute('aria-label', 'Burn ' + pitName(pit));
     }
+    rulebookButton.disabled = phase !== 'burn' && (phase !== 'game' || busy || game.turn !== PLAYER || game.outcome !== null);
+  }
+
+  function updateReader() {
+    bookPrevious.disabled = readerBusy || readerSpread === 0;
+    bookNext.disabled = readerBusy || readerSpread === rulebook.spreadCount - 1;
+    bookClose.disabled = readerBusy;
+    if (readerBusy) return;
+    $('book-page').textContent = (readerSpread + 1) + ' / ' + rulebook.spreadCount;
+    $('book-text').textContent = rulebook.describe(readerSpread);
+  }
+
+  async function openRulebook() {
+    if (rulebookButton.disabled || match.hidden) return;
+    resumePhase = phase;
+    phase = 'book';
+    readerBusy = true;
+    match.hidden = true;
+    updatePitButtons();
+    await rulebook.open();
+    readerSpread = 0;
+    readerBusy = false;
+    reader.hidden = false;
+    updateReader();
+    bookNext.focus({ preventScroll: true });
+  }
+
+  async function turnBook(offset) {
+    const next = readerSpread + offset;
+    if (phase !== 'book' || readerBusy || next < 0 || next >= rulebook.spreadCount) return;
+    readerBusy = true;
+    updateReader();
+    await rulebook.flip(next);
+    readerSpread = next;
+    readerBusy = false;
+    updateReader();
+    const control = offset < 0 ? bookPrevious : bookNext;
+    (control.disabled ? bookClose : control).focus({ preventScroll: true });
+  }
+
+  async function closeRulebook() {
+    if (phase !== 'book' || readerBusy) return;
+    readerBusy = true;
+    reader.hidden = true;
+    await rulebook.close();
+    phase = resumePhase;
+    readerBusy = false;
+    match.hidden = false;
+    layOutPits();
+    updatePitButtons();
+    rulebookButton.focus({ preventScroll: true });
   }
 
   function status(title, hint) {
@@ -286,15 +354,19 @@ async function launch() {
       status('A draw', 'Replay with the same pits.');
       showResult('A draw', 'Replay round');
     } else {
-      phase = 'loss-stare';
-      phaseStart = performance.now();
-      match.hidden = true;
-      stare = {
-        origin: grannyRoot.position.clone(),
-        eyes: Vector3.TransformCoordinates(new Vector3(0, 0.111, 0.0915), grannyHead.computeWorldMatrix(true)),
-      };
+      startStare();
     }
     updatePitButtons();
+  }
+
+  function startStare() {
+    phase = 'loss-stare';
+    phaseStart = performance.now();
+    match.hidden = true;
+    stare = {
+      origin: grannyRoot.position.clone(),
+      eyes: Vector3.TransformCoordinates(new Vector3(0, 0.111, 0.0915), grannyHead.computeWorldMatrix(true)),
+    };
   }
 
   function showResult(title, button) {
@@ -337,7 +409,7 @@ async function launch() {
 
   async function selectBurn(pit) {
     if (phase !== 'burn' || !burnablePits(game).includes(pit)) return;
-    const { burned, complete } = burnPit(game, pit);
+    const { burned, ending } = burnPit(game, pit);
     phase = 'burn-scene';
     updatePitButtons();
     match.hidden = true;
@@ -348,17 +420,44 @@ async function launch() {
     showCount(pit, 0);
     await wait(250);
     await panTableTo(seatedShot, 650);
-    await speak(burnLine.after, complete ? 'Continue' : 'Next round');
-    await panTableTo(overheadShot, 700);
-    if (complete) {
-      phase = 'victory';
-      match.hidden = false;
-      layOutPits();
-      status('You survived', 'A row has no playable pits left.');
-      showResult('You survived', 'Start a new run');
-    } else {
-      enterMatch();
+    await speak(burnLine.after, ending ? 'Continue' : 'Next round');
+    if (ending) {
+      await playEnding(ending);
+      return;
     }
+    await panTableTo(overheadShot, 700);
+    enterMatch();
+  }
+
+  async function playEnding(ending) {
+    if (ending === 'no-ground') {
+      await speak('You burned all your own ground. Where will you stand now?', 'Continue');
+      startStare();
+      return;
+    }
+
+    if (ending === 'false') {
+      await speak('You have burnt every field of mine. Go on, child. The door is open.', 'Stand up');
+      await panTableTo(() => ({
+        pose: { position: [-0.60, 1.46, 1.34], target: [-0.19, 1.06, -1.90], roll: 0 },
+        overhead: 0,
+      }), 720);
+      await speak('Ash needs feeding. Stay a little longer. You’ll make good compost for the next crop.', 'Continue');
+      await board.flareAt(-0.54, 1.13, 0.98, 1.45, 1550);
+    } else {
+      await speak('Four scars. You left enough earth for another crop. The fire knows my name now.', 'Continue');
+      await panTableTo(() => ({
+        pose: { position: [-0.14, 1.28, 1.31], target: [0, 1.01, -1.23], roll: 0, fov: 0.65 },
+        overhead: 0,
+      }), 640);
+      await board.flareAt(0, 0.59, -1.01, 2.8, 1850);
+      grannyRoot.setEnabled(false);
+    }
+
+    $('ending-shade').classList.add('dark');
+    await wait(reducedMotion ? 0 : 550);
+    phase = 'ending-result';
+    showResult(ending === 'true' ? 'True ending' : 'False ending', 'Start a new run');
   }
 
   async function animateTransfer(step, mover, captured) {
@@ -456,10 +555,20 @@ async function launch() {
   });
   again.addEventListener('click', () => {
     if (phase === 'draw') enterMatch();
-    else if (phase === 'game-over' || phase === 'victory') window.location.reload();
+    else if (phase === 'game-over' || phase === 'ending-result') window.location.reload();
   });
+  rulebookButton.addEventListener('click', () => void openRulebook());
+  bookPrevious.addEventListener('click', () => void turnBook(-1));
+  bookNext.addEventListener('click', () => void turnBook(1));
+  bookClose.addEventListener('click', () => void closeRulebook());
   window.addEventListener('keydown', (event) => {
     if (event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
+    if (phase === 'book') {
+      if (event.key === 'ArrowLeft') void turnBook(-1);
+      if (event.key === 'ArrowRight') void turnBook(1);
+      if (event.key === 'Escape') void closeRulebook();
+      return;
+    }
     const pit = ROWS[PLAYER][Number(event.key) - 1];
     if (pit !== undefined) void selectPit(pit);
   });
@@ -503,6 +612,9 @@ async function launch() {
         phase = 'game-over';
         showResult('Game over', 'Start a new run');
       }
+    } else if (phase === 'book') {
+      overhead = 1;
+      view(overheadPose());
     } else if (tableShot) {
       const shot = tableShot(now);
       overhead = shot.overhead;

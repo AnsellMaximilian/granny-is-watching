@@ -11,6 +11,7 @@
     <canvas id="scene" aria-hidden="true"></canvas>
     <div class="lens" aria-hidden="true"></div>
     <div id="eyelids" aria-hidden="true"></div>
+    <div id="ending-shade" class="ending-shade" aria-hidden="true"></div>
     <section id="intro" class="intro" aria-labelledby="game-title">
       <h1 id="game-title">Granny is<br />Watching</h1>
       <button id="wake" class="action" type="button" disabled>Loading…</button>
@@ -34,11 +35,19 @@
         <div class="score granny"><span>Granny</span><strong id="granny-score">0</strong></div>
       </header>
       <div id="pit-layer" class="pit-layer" aria-label="Congklak pits"></div>
+      <button id="rulebook-button" class="rulebook-button" type="button"><span>Rulebook</span></button>
       <footer class="turn">
         <h3 id="turn-title" aria-live="polite">Your turn</h3>
         <p id="turn-hint">Choose an occupied pit on the near row.</p>
         <p id="hand-count" hidden></p>
       </footer>
+    </section>
+    <section id="book-reader" class="book-reader" aria-label="Congklak rulebook" hidden>
+      <p id="book-text" class="visually-hidden" aria-live="polite"></p>
+      <button id="book-previous" class="action" type="button">Previous</button>
+      <span id="book-page" class="book-page"></span>
+      <button id="book-next" class="action" type="button">Next</button>
+      <button id="book-close" class="action" type="button">Close</button>
     </section>
     <section id="result" class="result" aria-labelledby="result-title" hidden>
       <div class="result-card">

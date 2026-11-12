@@ -160,17 +160,18 @@ function buildPitFire(scene, board, reducedMotion) {
   light.renderPriority = 1;
   light.setEnabled(false);
 
-  function ignite(pit) {
-    const { x, z } = PITS[pit];
-    root.position.set(x, BOARD_TOP - 0.025, z);
-    light.position.set(x, BOARD_TOP + 0.12, z);
+  function flareAt(x, y, z, scale = 1, duration = 1000) {
+    root.position.set(x, y, z);
+    root.scaling.setAll(scale);
+    light.position.set(x, y + 0.145 * scale, z);
+    light.range = 0.86 * scale;
     light.intensity = 0;
     root.setEnabled(true);
     light.setEnabled(true);
     const start = performance.now();
     return new Promise((resolve) => {
       const observer = scene.onBeforeRenderObservable.add(() => {
-        const elapsed = (performance.now() - start) / 1000;
+        const elapsed = (performance.now() - start) / duration;
         if (elapsed >= 1) {
           scene.onBeforeRenderObservable.remove(observer);
           root.setEnabled(false);
@@ -198,7 +199,14 @@ function buildPitFire(scene, board, reducedMotion) {
     });
   }
 
-  return { ignite, meshes: [...tongues.map(({ mesh }) => mesh), ...sparks] };
+  return {
+    ignite(pit) {
+      const { x, z } = PITS[pit];
+      return flareAt(x, BOARD_TOP - 0.025, z);
+    },
+    flareAt,
+    meshes: [...tongues.map(({ mesh }) => mesh), ...sparks],
+  };
 }
 
 export function buildBoard(scene, initialCounts, reducedMotion) {
@@ -319,6 +327,7 @@ export function buildBoard(scene, initialCounts, reducedMotion) {
   reset(initialCounts);
   return {
     ignite: fire.ignite,
+    flareAt: fire.flareAt,
     fireMeshes: fire.meshes,
     reset,
     setBurned,
