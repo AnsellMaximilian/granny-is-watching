@@ -14,18 +14,18 @@ function position(counts, turn = PLAYER) {
   };
 }
 
-test('A5 from the five-seed opening sows toward the left store and grants a fresh choice', () => {
+test('A4 from the four-seed opening sows toward the left store and grants a fresh choice', () => {
   const opening = newGame();
   assert.deepEqual(ROWS.map((row) => row.length), [6, 6]);
   assert.equal(opening.pits.length, 14);
-  assert.ok(ROWS.flat().every((pit) => opening.pits[pit] === 5));
+  assert.ok(ROWS.flat().every((pit) => opening.pits[pit] === 4));
   assert.deepEqual(STORES.map((pit) => opening.pits[pit]), [0, 0]);
-  const { game, steps, bonus } = playMove(opening, A5);
-  assert.deepEqual(steps.slice(1).map(({ pit }) => pit), [A4, A3, A2, A1, A_STORE]);
+  const { game, steps, bonus } = playMove(opening, A4);
+  assert.deepEqual(steps.slice(1).map(({ pit }) => pit), [A3, A2, A1, A_STORE]);
   assert.equal(bonus, true);
   assert.equal(game.turn, PLAYER);
-  assert.deepEqual(game.pits.slice(0, A_STORE + 1), [6, 6, 6, 6, 0, 5, 1]);
-  assert.equal(opening.pits[A5], 5);
+  assert.deepEqual(game.pits.slice(0, A_STORE + 1), [5, 5, 5, 0, 4, 4, 1]);
+  assert.equal(opening.pits[A4], 4);
 });
 
 test('relay continues with every seed in the occupied landing pit', () => {
@@ -69,9 +69,9 @@ test('the opponent’s store is skipped from both directions', () => {
 });
 
 test('an empty row takes precedence over a store bonus and the sweep can draw', () => {
-  const { game } = playMove(position({ [A1]: 1, [A_STORE]: 29, [B1]: 2, [B_STORE]: 28 }), A1);
+  const { game } = playMove(position({ [A1]: 1, [A_STORE]: 23, [B1]: 2, [B_STORE]: 22 }), A1);
   assert.equal(game.outcome, 'draw');
-  assert.deepEqual(STORES.map((pit) => game.pits[pit]), [30, 30]);
+  assert.deepEqual(STORES.map((pit) => game.pits[pit]), [24, 24]);
   assert.ok(ROWS.flat().every((pit) => game.pits[pit] === 0));
   assert.deepEqual(legalPits(game), []);
 });
@@ -100,12 +100,12 @@ test('full rounds preserve all seeds in every animation step and reach both outc
       for (const step of next.steps) {
         step.emptied?.forEach((empty) => { rendered[empty] = 0; });
         rendered[step.pit] = step.count;
-        assert.equal(rendered.reduce((sum, count) => sum + count, step.hand ?? 0), 60);
+        assert.equal(rendered.reduce((sum, count) => sum + count, step.hand ?? 0), 48);
       }
       assert.deepEqual(rendered, next.game.pits);
       game = next.game;
     }
-    assert.equal(game.pits[A_STORE] + game.pits[B_STORE], 60);
+    assert.equal(game.pits[A_STORE] + game.pits[B_STORE], 48);
     outcomes.add(game.outcome);
   }
   assert.ok(outcomes.has('win') && outcomes.has('loss'));

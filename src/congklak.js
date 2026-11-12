@@ -11,7 +11,7 @@ export const STORES = ROWS.map((row) => row.at(-1) + 1);
 const CLOCKWISE = [...ROWS[PLAYER].toReversed(), STORES[PLAYER], ...ROWS[GRANNY], STORES[GRANNY]];
 
 export function newGame() {
-  const pits = Array(CLOCKWISE.length).fill(5);
+  const pits = Array(CLOCKWISE.length).fill(4);
   for (const store of STORES) pits[store] = 0;
   return { pits, turn: PLAYER, outcome: null };
 }
