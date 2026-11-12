@@ -1,0 +1,146 @@
+import { SIGNALS } from './smart-spectra-readings.js';
+import { SpectraSession } from './smart-spectra-session.js';
+
+async function loadSdk() {
+  if (typeof MediaStreamTrackProcessor === 'undefined' || typeof OffscreenCanvas === 'undefined') {
+    throw { code: 'PROCESSOR_UNSUPPORTED' };
+  }
+  const [sdk, messages] = await Promise.all([
+    import('@smartspectra/node-sdk/renderer'),
+    import('@smartspectra/node-sdk/messages'),
+  ]);
+  const { MetricType } = sdk;
+  return {
+    SmartSpectraSDK: sdk.SmartSpectraSDK,
+    decodeMetrics: messages.decodeMetrics,
+    requestedMetrics: [
+      MetricType.PULSE_RATE, MetricType.BREATHING_RATE, MetricType.HRV,
+      MetricType.BLINKING, MetricType.TALKING, MetricType.EXPRESSIONS, MetricType.EDA_TRACE,
+    ],
+  };
+}
+
+export function mountSmartSpectra() {
+  const $ = (id) => document.getElementById('spectra-' + id);
+  const panel = $('panel');
+  const video = $('video');
+  const toggle = $('toggle');
+  const retry = $('retry');
+  const settings = $('settings');
+  const fields = new Map();
+  let promptedForKey = false;
+
+  for (const [index, signal] of SIGNALS.entries()) {
+    const container = document.createElement('div');
+    container.className = 'spectra-signal';
+    const label = document.createElement('dt');
+    label.textContent = signal.label;
+    const reading = document.createElement('dd');
+    const value = document.createElement('span');
+    const detail = document.createElement('small');
+    reading.append(value, detail);
+    container.append(label, reading);
+    $(index < 2 ? 'primary' : 'secondary').append(container);
+    fields.set(signal.id, { reading, value, detail });
+  }
+
+  const session = new SpectraSession({ mediaDevices: navigator.mediaDevices, loadSdk, onChange: render });
+  function render() {
+    const state = session.state;
+    const { phase, stream, hint } = state;
+    const active = ['starting', 'measuring', 'adjust'].includes(phase);
+    panel.dataset.state = phase;
+    if (video.srcObject !== stream) {
+      video.srcObject = stream;
+      if (stream) video.play().catch(() => {});
+    }
+    $('preview').hidden = !stream;
+    $('readings').hidden = !stream;
+    const status = {
+      off: 'Camera off', opening: 'Opening camera…', preview: 'Camera ready',
+      starting: 'Starting signals…', measuring: 'Measuring', adjust: 'Adjust camera',
+      'camera-error': 'Camera unavailable', 'signal-error': 'Signals unavailable',
+    }[phase];
+    // Do not replace aria-live text on every metrics tick or repeat SDK hints.
+    if ($('status').textContent !== status) $('status').textContent = status;
+    if ($('hint').textContent !== hint) $('hint').textContent = hint;
+    toggle.textContent = phase === 'opening' ? 'Cancel' : stream ? 'Stop camera' : 'Enable camera';
+    toggle.disabled = false;
+    retry.hidden = !stream || !state.nativeAvailable || !state.hasKey || active;
+    settings.hidden = !state.nativeAvailable;
+    if (state.needsKey && stream && !promptedForKey) {
+      settings.open = true;
+      promptedForKey = true;
+    }
+    const track = stream?.getVideoTracks()[0];
+    $('camera-name').textContent = track?.label || 'Live camera';
+    $('camera-picker').hidden = !stream || state.devices.length < 2;
+    const ids = state.devices.map((device) => device.deviceId).join('|');
+    if ($('camera').dataset.ids !== ids) {
+      $('camera').replaceChildren(...state.devices.map((device, index) => {
+        const option = document.createElement('option');
+        option.value = device.deviceId;
+        option.textContent = device.label || 'Camera ' + (index + 1);
+        return option;
+      }));
+      $('camera').dataset.ids = ids;
+    }
+    const selected = track?.getSettings().deviceId;
+    if (selected) $('camera').value = selected;
+    renderReadings();
+  }
+
+  function renderReadings() {
+    session.poll();
+    const { phase, validationCode } = session.state;
+    for (const sample of session.readings.snapshot({ active: ['starting', 'measuring', 'adjust'].includes(phase), validationCode })) {
+      const field = fields.get(sample.id);
+      field.value.textContent = sample.value;
+      field.detail.textContent = sample.detail;
+      field.reading.dataset.quality = sample.quality;
+    }
+  }
+
+  toggle.addEventListener('click', () => {
+    if (session.state.stream || session.state.phase === 'opening') session.stopCamera();
+    else void session.startCamera($('camera').value);
+  });
+  retry.addEventListener('click', () => void session.startSignals());
+  $('camera').addEventListener('change', () => {
+    const id = $('camera').value;
+    session.stopCamera();
+    void session.startCamera(id);
+  });
+  $('key-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const key = $('key').value;
+    $('key').value = '';
+    if (!key.trim()) return;
+    settings.open = false;
+    promptedForKey = false;
+    void session.setKey(key);
+  });
+  $('collapse').addEventListener('click', () => {
+    const hidden = !$('body').hidden;
+    $('body').hidden = hidden;
+    $('collapse').textContent = hidden ? '+' : '−';
+    $('collapse').setAttribute('aria-expanded', String(!hidden));
+    $('collapse').setAttribute('aria-label', hidden ? 'Expand camera panel' : 'Collapse camera panel');
+    panel.classList.toggle('collapsed', hidden);
+  });
+  const deviceChange = () => void session.refreshDevices();
+  navigator.mediaDevices?.addEventListener('devicechange', deviceChange);
+  const timer = setInterval(renderReadings, 250);
+  window.addEventListener('pagehide', () => {
+    clearInterval(timer);
+    navigator.mediaDevices?.removeEventListener('devicechange', deviceChange);
+    session.stopCamera();
+  }, { once: true });
+
+  // Ordinary browser development remains playable, with preview-only support.
+  if (window.grannySpectra?.getConfig) {
+    window.grannySpectra.getConfig()
+      .then((config) => session.configure({ ...config, desktop: true }))
+      .catch(() => session.configure({ desktop: true, nativeAvailable: false }));
+  } else session.configure({ desktop: false, nativeAvailable: false });
+}

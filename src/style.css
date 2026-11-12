@@ -31,6 +31,72 @@ button:focus-visible { outline: 2px solid #ffe0a8; outline-offset: 4px; }
   cursor: pointer;
 }
 .sound-toggle:hover { color: var(--text); border-color: #d6ad76; }
+.spectra-panel {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  width: 238px;
+  max-height: calc(100vh - 72px);
+  overflow-y: auto;
+  z-index: 4;
+  border: 1px solid #99734f80;
+  border-radius: 5px;
+  background: #17120ff2;
+  box-shadow: 0 6px 22px #0007;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  scrollbar-width: thin;
+}
+.spectra-heading { display: flex; align-items: center; justify-content: space-between; padding: 6px 9px; }
+.spectra-heading h2 { font: 600 0.75rem "Segoe UI", sans-serif; margin: 0; letter-spacing: 0.035em; }
+#spectra-light { display: inline-block; width: 6px; height: 6px; margin-right: 4px; border-radius: 50%; background: #8b8073; }
+.spectra-panel[data-state="measuring"] #spectra-light { background: #a8c69a; box-shadow: 0 0 6px #a8c69a50; }
+.spectra-panel[data-state="adjust"] #spectra-light,
+.spectra-panel[data-state$="error"] #spectra-light { background: #eead69; }
+.spectra-panel button, .spectra-panel input, .spectra-panel select {
+  color: var(--text);
+  font: inherit;
+  background: #302219;
+  border: 1px solid #856445;
+  border-radius: 3px;
+  padding: 5px 8px;
+  min-width: 0;
+}
+.spectra-panel button, .spectra-panel summary { cursor: pointer; }
+.spectra-panel button:hover { background: #533b28; }
+.spectra-panel button:disabled { opacity: 0.5; cursor: default; }
+.spectra-heading button { border: 0; background: transparent; padding: 1px 6px; font-size: 1.1rem; line-height: 1; }
+#spectra-body { padding: 0 9px 8px; }
+.spectra-preview { position: relative; aspect-ratio: 16 / 8; overflow: hidden; border-radius: 2px; background: #090908; }
+.spectra-preview video { display: block; width: 100%; height: 100%; object-fit: contain; transform: scaleX(-1); }
+#spectra-camera-name { position: absolute; left: 5px; bottom: 3px; max-width: calc(100% - 10px); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; background: #110d0ac9; padding: 1px 4px; font-size: 0.63rem; }
+.spectra-status { margin: 7px 0 2px; font-weight: 600; color: var(--gold); }
+.spectra-hint { margin: 0 0 7px; color: var(--muted); font-size: 0.7rem; }
+.spectra-signals { display: grid; grid-template-columns: 1fr 1fr; gap: 7px 10px; margin: 8px 0; }
+.spectra-signal { min-width: 0; }
+.spectra-signals dt { font-size: 0.64rem; color: var(--muted); }
+.spectra-signals dd { margin: 0; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+.spectra-signals dd small { display: block; min-height: 13px; font-size: 0.61rem; color: #b8a48d; }
+.spectra-signals dd[data-quality="live"] { color: #dbedcd; }
+.spectra-panel summary { color: var(--muted); padding-block: 4px; font-size: 0.69rem; }
+.spectra-panel summary:focus-visible { outline: 2px solid var(--gold); }
+.spectra-settings { border-top: 1px solid #99734f40; margin-top: 7px; }
+.spectra-settings label { display: block; margin: 3px 0 5px; font-size: 0.65rem; }
+.spectra-settings input { width: 100%; margin-bottom: 5px; }
+.spectra-controls { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.spectra-camera-picker { font-size: 0.65rem; color: var(--muted); }
+.spectra-camera-picker select { width: 100%; display: block; margin-top: 3px; }
+.spectra-note { margin: 6px 0 0; font-size: 0.61rem; color: #a89681; }
+@media (max-width: 900px) {
+  .spectra-panel { left: 8px; bottom: 8px; width: clamp(112px, 18vw, 190px); max-height: 55vh; }
+  .spectra-heading { padding-inline: 6px; position: sticky; top: 0; z-index: 1; background: #17120f; }
+  .spectra-heading h2 { font-size: 0.65rem; line-height: 1.2; }
+  #spectra-body { padding-inline: 6px; }
+  .spectra-preview { aspect-ratio: 16 / 10; }
+  .spectra-signals { gap: 4px 8px; }
+  .spectra-signals dd { font-size: 0.78rem; }
+  .spectra-note { display: none; }
+}
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -279,3 +345,13 @@ button.pit-count.burnable:hover, button.pit-count.burnable:focus-visible { backg
 .game-over .result-card { padding: 24px 30px; }
 .game-over .result-card p { margin: 12px 0 17px; }
 .error { position: absolute; inset: auto 20px 20px; background: var(--panel); padding: 14px; z-index: 3; }
+
+/* Reserve room for the optional camera panel beside the existing game HUD. */
+.intro { padding-left: max(280px, 24vw); }
+@media (max-width: 900px) {
+  .intro { justify-content: flex-start; padding: 10vh 28px 0; }
+  .intro h1 { font-size: clamp(3rem, 8vw, 5.8rem); }
+  .turn { left: calc(50% + 66px); width: calc(100% - 185px); }
+  .burn-dialogue { margin-left: 150px; width: calc(100% - 170px); padding: 12px 15px; }
+  .book-reader { left: 140px; }
+}

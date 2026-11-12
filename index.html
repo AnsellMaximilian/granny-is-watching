@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self' blob: ws:; object-src 'none'; base-uri 'none'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob:; worker-src 'self' blob:; connect-src 'self' blob: ws:; object-src 'none'; base-uri 'none'" />
   <title>Granny is Watching</title>
 </head>
 <body>
@@ -13,6 +13,43 @@
     <div id="eyelids" aria-hidden="true"></div>
     <div id="ending-shade" class="ending-shade" aria-hidden="true"></div>
     <button id="sound-toggle" class="sound-toggle" type="button" aria-label="Mute sound" aria-pressed="true">Sound on</button>
+    <aside id="spectra-panel" class="spectra-panel" aria-label="Camera and detected signals" data-state="off">
+      <header class="spectra-heading">
+        <h2><span id="spectra-light" aria-hidden="true"></span> Camera &amp; signals</h2>
+        <button id="spectra-collapse" type="button" aria-expanded="true" aria-controls="spectra-body" aria-label="Collapse camera panel">−</button>
+      </header>
+      <div id="spectra-body">
+        <div id="spectra-preview" class="spectra-preview" hidden>
+          <video id="spectra-video" autoplay muted playsinline aria-label="Your live camera feed"></video>
+          <span id="spectra-camera-name">Live camera</span>
+        </div>
+        <p id="spectra-status" class="spectra-status" role="status">Camera off</p>
+        <p id="spectra-hint" class="spectra-hint">Enable your camera to check the signals.</p>
+        <div id="spectra-readings" hidden>
+          <dl id="spectra-primary" class="spectra-signals"></dl>
+          <details id="spectra-more">
+            <summary>More signals</summary>
+            <dl id="spectra-secondary" class="spectra-signals"></dl>
+          </details>
+        </div>
+        <label id="spectra-camera-picker" class="spectra-camera-picker" hidden>Camera
+          <select id="spectra-camera" aria-label="Choose camera"></select>
+        </label>
+        <details id="spectra-settings" class="spectra-settings" hidden>
+          <summary>API key</summary>
+          <form id="spectra-key-form">
+            <label for="spectra-key">SmartSpectra key · this session only</label>
+            <input id="spectra-key" type="password" autocomplete="off" spellcheck="false" maxlength="1024" placeholder="Paste your API key" />
+            <button type="submit">Use key</button>
+          </form>
+        </details>
+        <div class="spectra-controls">
+          <button id="spectra-toggle" type="button" disabled>Enable camera</button>
+          <button id="spectra-retry" type="button" hidden>Retry signals</button>
+        </div>
+        <p class="spectra-note">Preview only · signals do not affect play</p>
+      </div>
+    </aside>
     <section id="intro" class="intro" aria-labelledby="game-title">
       <h1 id="game-title">Granny is<br />Watching</h1>
       <button id="wake" class="action" type="button" disabled>Loading…</button>

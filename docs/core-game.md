@@ -4,6 +4,14 @@ The player wakes up on the floor of a candlelit house and rises to see Granny. S
 
 Horror gamelan starts looping when the player selects **Wake up**. Four wood impacts alternate with individual seed landings. Fire ignition accompanies every pit burn and both burning endings. A synthesized scream plays with Granny's loss lunge and with the fire that takes her in the true ending. The background music dips during screams. **Sound on / Sound off** mutes or restores all audio.
 
+## Camera and signals preview
+
+An optional **Camera & signals** panel sits at the bottom left throughout the game. **Enable camera** starts a mirrored live webcam preview. **Stop camera** releases the webcam and clears its readings. The **− / +** button collapses or expands the panel without stopping capture. If more than one camera is available, a selector lets the player switch. Camera or signal errors do not interrupt the game.
+
+In Electron, SmartSpectra detects pulse, breathing rate, HRV (RMSSD), blinking, talking, facial expression, and a unitless EDA proxy. Pulse and breathing are always shown beneath the preview; **More signals** opens the rest. Its live guidance reports face positioning, lighting, movement, and camera readiness. Rates have warm-up countdowns and confidence labels. Missing, unstable, low-confidence, or stale readings show a dash with a reason. A missing or rejected key can be supplied through **API key**. Signal failures keep the preview available and offer a manual retry; camera failures offer a fresh start.
+
+This milestone only displays signals. They do not influence Granny, congklak, progression, or endings. The game does not record the webcam, save measurements, capture microphone audio, or request LLM insights. SDK telemetry is disabled. See the [setup instructions](../README.md#camera-and-smartspectra) for the local key and camera requirements.
+
 ## Play a round
 
 The opening board has six small pits per side, four cowrie seeds per pit, and two empty stores. The player moves first in every round. Click an occupied pit on the near row or press **1–6**. See the [congklak rules](congklak-rules.md) for sowing, relays, captures, and scoring.

@@ -4,7 +4,7 @@
 **Also known as:** *dakon*, *dhakon*, *congkak* (names vary by region)  
 **Document type:** Detailed, self-contained rules reference  
 **Edition:** Six small pits per side with four starting seeds per pit\
-**Last prepared:** 12 November 2026
+**Last prepared:** 13 November 2026
 
 > **Regional rules.** Indonesian families, schools, clubs, and regions may differ on who starts, how a capture works, and when a new round starts. Sections 1–12 describe the version played in *Granny is Watching*. Section 13 gives context on other customs.
 
@@ -138,6 +138,8 @@ A STORE: 0   A1 A2 A3 A4 A5 A6: 4 4 4 4 4 4
 On your turn, choose **one unburned small pit on your own side** containing at least one seed.
 
 Click an occupied pit on the near row or press **1–6** for pits **A1–A6** from left to right. Granny picks a legal pit automatically. Her row and store highlight briefly while she chooses.
+
+Typing in the camera panel's API key field or using its camera selector does not trigger pit shortcuts. Camera signals do not change the rules, scoring, or Granny's moves in this milestone.
 
 ### 7.2 Picking up seeds
 

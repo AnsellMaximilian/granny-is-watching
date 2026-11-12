@@ -14,6 +14,9 @@ import { PLAYER, GRANNY, ROWS, STORES, burnablePits, burnPit, chooseGrannyPit, l
 import { BURN_DIALOGUE } from './burn-dialogue.js';
 import { buildRulebook } from './rulebook.js';
 import { createGameAudio } from './audio.js';
+import { mountSmartSpectra } from './smart-spectra-panel.js';
+
+mountSmartSpectra();
 
 const $ = (id) => document.getElementById(id);
 const wake = $('wake');
@@ -581,6 +584,7 @@ async function launch() {
   bookClose.addEventListener('click', () => void closeRulebook());
   window.addEventListener('keydown', (event) => {
     if (event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
+    if (event.target.closest?.('input, select, textarea, [contenteditable="true"]')) return;
     if (phase === 'book') {
       if (event.key === 'ArrowLeft') void turnBook(-1);
       if (event.key === 'ArrowRight') void turnBook(1);
