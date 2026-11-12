@@ -13,6 +13,7 @@ import { BOARD_TOP, PITS, buildBoard } from './board.js';
 import { PLAYER, GRANNY, ROWS, STORES, burnablePits, burnPit, chooseGrannyPit, legalPits, newGame, playMove } from './congklak.js';
 import { BURN_DIALOGUE } from './burn-dialogue.js';
 import { buildRulebook } from './rulebook.js';
+import { createGameAudio } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
 const wake = $('wake');
@@ -72,6 +73,13 @@ function wakePose(time) {
 }
 
 async function launch() {
+  const sound = createGameAudio();
+  $('sound-toggle').addEventListener('click', () => {
+    const muted = sound.toggleMuted();
+    $('sound-toggle').textContent = muted ? 'Sound off' : 'Sound on';
+    $('sound-toggle').setAttribute('aria-pressed', String(!muted));
+    $('sound-toggle').setAttribute('aria-label', muted ? 'Unmute sound' : 'Mute sound');
+  });
   const engine = new Engine(canvas, true, { preserveDrawingBuffer: false, stencil: true });
   const scene = new Scene(engine);
   scene.useRightHandedSystem = true;
@@ -148,6 +156,10 @@ async function launch() {
   }
 
   function poseStare(elapsed) {
+    if (!stare.sounded && (reducedMotion || elapsed >= 0.16)) {
+      stare.sounded = true;
+      sound.scream();
+    }
     const lunge = reducedMotion ? 1 : ease(Math.max(0, Math.min(1, (elapsed - 0.16) / 0.27)));
     const distance = 1.76 * lunge;
     // Clear the table early in the lunge so the close-up reads as a jump.
@@ -414,6 +426,7 @@ async function launch() {
     updatePitButtons();
     match.hidden = true;
     await panTableTo(() => fireShot(pit), 450);
+    sound.ignite(PITS[pit].x);
     await board.ignite(pit);
     game = { ...game, burned };
     board.setBurned(burned);
@@ -443,6 +456,7 @@ async function launch() {
         overhead: 0,
       }), 720);
       await speak('Ash needs feeding. Stay a little longer. You’ll make good compost for the next crop.', 'Continue');
+      sound.ignite(-0.54);
       await board.flareAt(-0.54, 1.13, 0.98, 1.45, 1550);
     } else {
       await speak('Four scars. You left enough earth for another crop. The fire knows my name now.', 'Continue');
@@ -450,6 +464,8 @@ async function launch() {
         pose: { position: [-0.14, 1.28, 1.31], target: [0, 1.01, -1.23], roll: 0, fov: 0.65 },
         overhead: 0,
       }), 640);
+      sound.ignite();
+      sound.scream(true);
       await board.flareAt(0, 0.59, -1.01, 2.8, 1850);
       grannyRoot.setEnabled(false);
     }
@@ -503,6 +519,7 @@ async function launch() {
           break;
         case 'drop':
           await board.drop(step.pit, dropMs);
+          sound.seedDrop(PITS[step.pit].x);
           showCount(step.pit, step.count);
           mark(step.pit);
           showHand(step.hand);
@@ -543,6 +560,7 @@ async function launch() {
   }
 
   wake.addEventListener('click', () => {
+    sound.start();
     $('intro').hidden = true;
     if (!reducedMotion) $('eyelids').classList.add('opening');
     phase = 'wake';

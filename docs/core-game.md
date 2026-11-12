@@ -2,6 +2,8 @@
 
 The player wakes up on the floor of a candlelit house and rises to see Granny. She approaches the table, sits, and points across it. **Sit down** takes the player to the overhead congklak board.
 
+Horror gamelan starts looping when the player selects **Wake up**. Four wood impacts alternate with individual seed landings. Fire ignition accompanies every pit burn and both burning endings. A synthesized scream plays with Granny's loss lunge and with the fire that takes her in the true ending. The background music dips during screams. **Sound on / Sound off** mutes or restores all audio.
+
 ## Play a round
 
 The opening board has six small pits per side, four cowrie seeds per pit, and two empty stores. The player moves first in every round. Click an occupied pit on the near row or press **1–6**. See the [congklak rules](congklak-rules.md) for sowing, relays, captures, and scoring.
