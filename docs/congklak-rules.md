@@ -256,7 +256,7 @@ In the opening round, if you finish with **31** seeds and Granny has **17**, you
 - **Draw:** Choose **Replay round** to reset the seeds with the same burned pits.
 - **Loss:** Granny lunges into a close stare and the game shows **Game over**. **Start a new run** restores the original board and returns to the wake-up scene.
 
-The rulebook on the table includes a four-dot clue on its last page. Burn exactly the four marked pits in any order for the true ending. Burning all of Granny's pits gives the false ending. Burning the last playable pit on your side ends the run in defeat. Select **Continue** after Granny's remark to see the ending. See [core gameplay](core-game.md) for the full run flow.
+The rulebook on the table includes a four-dot clue on its last page. Each new run draws two marked pits per side and keeps them for every round in that run. Burn exactly the four marked pits in any order for the true ending. Burning all of Granny's pits gives the false ending. Burning the last playable pit on your side ends the run in defeat. Select **Continue** after Granny's remark to see the ending. See [core gameplay](core-game.md) for the full run flow.
 
 > **Not the same as every traditional multi-round game:** Some households distinguish a round ending when one player runs out of playable seeds (*menang jalan*) from ultimately winning by seeds (*menang biji*), then redistribute the seeds for another round. See Section 13 for that style.
 

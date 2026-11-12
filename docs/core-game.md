@@ -10,7 +10,7 @@ The opening board has six small pits per side, four cowrie seeds per pit, and tw
 
 Click the book on the table before choosing a move or a pit to burn. It floats up and opens. **Next** and **Previous** turn its pages. **Close** returns the book to the table and resumes the board at the same point.
 
-The last spread shows a clue. Two vertical lines frame four dots on the same six-column spacing as the board. Granny's row is above the player's row. The cover and illustrated spreads draw from the [cover](reference-images/rulebook-cover.jpg), [setup](reference-images/rulebook-setup.jpg), and [capture](reference-images/rulebook-capture.jpg) references.
+The last spread shows a clue. A new run draws four marked pits at random, two per side. The marks stay fixed through every round and draw replay in that run. The clue uses the setup diagram's pit size and row and column spacing, with two vertical lines marking the edges of the grid. Granny's row is above the player's row. The cover and illustrated spreads draw from the [cover](reference-images/rulebook-cover.jpg), [setup](reference-images/rulebook-setup.jpg), and [capture](reference-images/rulebook-capture.jpg) references.
 
 ## Win and burn a pit
 

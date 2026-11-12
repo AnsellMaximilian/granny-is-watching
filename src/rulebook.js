@@ -4,7 +4,7 @@ import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { CreatePlane } from '@babylonjs/core/Meshes/Builders/planeBuilder';
 import { CreateTorus } from '@babylonjs/core/Meshes/Builders/torusBuilder';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
-import { ESCAPE_PATTERN, GRANNY, PLAYER, ROWS } from './congklak.js';
+import { GRANNY, PLAYER, ROWS } from './congklak.js';
 import { box, material, randomFrom } from './geometry.js';
 import { TABLE_HEIGHT } from './room.js';
 
@@ -13,6 +13,10 @@ const PAGE_HEIGHT = 0.33;
 const TEXTURE_WIDTH = 512;
 const TEXTURE_HEIGHT = 704;
 const INK = '#302016';
+const COLUMN_SPACING = 45;
+const ROW_SPACING = 46;
+const PIT_RADIUS = 15;
+const PIT_COLUMNS = ROWS[PLAYER].map((_, column) => 143 + COLUMN_SPACING * column);
 const PAPER_SPREADS = [
   [
     { title: 'Set the board', paragraphs: [
@@ -46,10 +50,6 @@ const PAPER_SPREADS = [
     { pattern: true },
   ],
 ];
-
-const patternRows = [GRANNY, PLAYER].map((side) =>
-  ROWS[side].flatMap((pit, column) => ESCAPE_PATTERN.includes(pit) ? [column] : []),
-);
 
 function paper(ctx, seed, cover) {
   const random = randomFrom(seed);
@@ -120,36 +120,37 @@ function drawBoard(ctx) {
     ctx.ellipse(x, 539, 21, 42, 0, 0, Math.PI * 2);
     ctx.stroke();
   }
-  for (let i = 0; i < ROWS[PLAYER].length; i++) {
-    for (const y of [516, 562]) {
+  for (const x of PIT_COLUMNS) {
+    for (const y of [516, 516 + ROW_SPACING]) {
       ctx.beginPath();
-      ctx.arc(143 + 45 * i, y, 15, 0, Math.PI * 2);
+      ctx.arc(x, y, PIT_RADIUS, 0, Math.PI * 2);
       ctx.stroke();
     }
   }
 }
 
-function drawPattern(ctx) {
-  const left = 62;
-  const width = 388;
-  const step = width / ROWS[PLAYER].length;
+function drawPattern(ctx, patternRows) {
+  const top = (TEXTURE_HEIGHT - ROW_SPACING) / 2;
+  const left = PIT_COLUMNS[0] - COLUMN_SPACING / 2;
+  const right = PIT_COLUMNS.at(-1) + COLUMN_SPACING / 2;
+  const edgePadding = PIT_RADIUS + 12;
   ctx.lineWidth = 4;
   ctx.beginPath();
-  for (const x of [left, left + width]) {
-    ctx.moveTo(x, 242);
-    ctx.lineTo(x, 452);
+  for (const x of [left, right]) {
+    ctx.moveTo(x, top - edgePadding);
+    ctx.lineTo(x, top + ROW_SPACING + edgePadding);
   }
   ctx.stroke();
   for (const [row, columns] of patternRows.entries()) {
     for (const column of columns) {
       ctx.beginPath();
-      ctx.arc(left + (column + 0.5) * step, 296 + 100 * row, 9, 0, 2 * Math.PI);
+      ctx.arc(PIT_COLUMNS[column], top + ROW_SPACING * row, PIT_RADIUS, 0, 2 * Math.PI);
       ctx.fill();
     }
   }
 }
 
-function pageMaterial(scene, name, page, seed) {
+function pageMaterial(scene, name, page, seed, patternRows) {
   const texture = new DynamicTexture(name, { width: TEXTURE_WIDTH, height: TEXTURE_HEIGHT }, scene, true);
   const ctx = texture.getContext();
   paper(ctx, seed, page.cover);
@@ -161,7 +162,7 @@ function pageMaterial(scene, name, page, seed) {
     ctx.fillText('Congklak', 256, 331);
     shellInk(ctx, 256, 444, -0.45, 1.55);
   } else if (page.pattern) {
-    drawPattern(ctx);
+    drawPattern(ctx, patternRows);
   } else {
     ctx.font = 'bold 40px Georgia';
     ctx.fillText(page.title, 46, 99);
@@ -186,7 +187,10 @@ function pageMaterial(scene, name, page, seed) {
   return surface;
 }
 
-export function buildRulebook(scene, camera, aspect, reducedMotion) {
+export function buildRulebook(scene, camera, aspect, reducedMotion, escapePattern) {
+  const patternRows = [GRANNY, PLAYER].map((side) =>
+    ROWS[side].flatMap((pit, column) => escapePattern.includes(pit) ? [column] : []),
+  );
   const tableCenter = new Vector3(1.17, TABLE_HEIGHT + 0.039, 0.485);
   const rest = tableCenter.subtract(new Vector3(PAGE_WIDTH / 2, 0.022, 0));
   const flat = Quaternion.RotationYawPitchRoll(0, -Math.PI / 2, 0);
@@ -204,7 +208,7 @@ export function buildRulebook(scene, camera, aspect, reducedMotion) {
   leaf.setEnabled(false);
 
   const surfaces = PAPER_SPREADS.map((spread, i) =>
-    spread.map((page, side) => pageMaterial(scene, 'Rulebook page ' + (i * 2 + side + 1), page, 23 + i * 2 + side)),
+    spread.map((page, side) => pageMaterial(scene, 'Rulebook page ' + (i * 2 + side + 1), page, 23 + i * 2 + side, patternRows)),
   );
   const coverArt = pageMaterial(scene, 'How to Play Congklak cover', { cover: true }, 134);
 

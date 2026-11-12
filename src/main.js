@@ -82,11 +82,11 @@ async function launch() {
   camera.maxZ = 22;
   const aspect = () => canvas.clientWidth / Math.max(canvas.clientHeight, 1);
   const room = buildRoom(scene);
-  const rulebook = buildRulebook(scene, camera, aspect, reducedMotion);
+  let game = newGame();
+  const rulebook = buildRulebook(scene, camera, aspect, reducedMotion, game.escapePattern);
   const glow = new GlowLayer('Candle bloom', scene, { mainTextureFixedSize: 256, blurKernelSize: 42 });
   glow.intensity = 0.48;
   for (const flame of room.flames) glow.addIncludedOnlyMesh(flame);
-  let game = newGame();
   const board = buildBoard(scene, game.pits, reducedMotion);
   for (const flame of board.fireMeshes) glow.addIncludedOnlyMesh(flame);
 
@@ -331,7 +331,7 @@ async function launch() {
 
   function enterMatch() {
     tableShot = undefined;
-    game = newGame(game.burned);
+    game = newGame(game.burned, game.escapePattern);
     board.reset(game.pits);
     board.setBurned(game.burned);
     game.pits.forEach((count, pit) => showCount(pit, count));

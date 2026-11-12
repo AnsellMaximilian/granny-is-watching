@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ESCAPE_PATTERN, GRANNY, PLAYER, ROWS, STORES, burnablePits, burnPit, chooseGrannyPit, legalPits, newGame, playMove } from '../src/congklak.js';
+import { GRANNY, PLAYER, ROWS, STORES, burnablePits, burnPit, chooseGrannyPit, legalPits, newGame, playMove } from '../src/congklak.js';
 
 const [A1, A2, A3, A4, A5, A6] = ROWS[PLAYER];
 const [B1, B2, B3, B4, B5, B6] = ROWS[GRANNY];
@@ -93,8 +93,9 @@ test('a win lets the player burn one open pit on either side for the next round'
   const { burned, ending } = burnPit(game, B4);
   assert.equal(ending, null);
   assert.deepEqual(game.burned, [A2]);
-  const next = newGame(burned);
+  const next = newGame(burned, game.escapePattern);
   assert.deepEqual(next.burned, [A2, B4]);
+  assert.deepEqual(next.escapePattern, game.escapePattern);
   assert.equal(next.turn, PLAYER);
   assert.equal(next.pits.reduce((sum, count) => sum + count, 0), 40);
   assert.equal(next.pits[A2], 0);
@@ -117,14 +118,29 @@ test('both sowing paths skip burned pits and a burned opposite pit cannot be cap
   assert.equal(final.game.pits[B3], 0);
 });
 
+test('new runs draw two distinct pits per side and moves and replays keep the clue', (t) => {
+  const random = t.mock.method(Math, 'random', () => 0);
+  const first = newGame();
+  random.mock.mockImplementation(() => 0.999);
+  const second = newGame();
+  for (const { escapePattern } of [first, second]) {
+    assert.equal(new Set(escapePattern).size, 4);
+    for (const row of ROWS) assert.equal(escapePattern.filter((pit) => row.includes(pit)).length, 2);
+  }
+  assert.notDeepEqual(first.escapePattern, second.escapePattern);
+  const moved = playMove(first, A4).game;
+  assert.deepEqual(moved.escapePattern, first.escapePattern);
+  assert.deepEqual(newGame(moved.burned, moved.escapePattern).escapePattern, first.escapePattern);
+});
+
 test('the exact four book marks unlock the true ending in any order', () => {
-  assert.deepEqual(ESCAPE_PATTERN, [B2, B5, A1, A4]);
-  for (const last of ESCAPE_PATTERN) {
-    const game = { ...newGame(ESCAPE_PATTERN.filter((pit) => pit !== last)), outcome: 'win' };
+  const pattern = [B2, B5, A1, A4];
+  for (const last of pattern) {
+    const game = { ...newGame(pattern.filter((pit) => pit !== last), pattern), outcome: 'win' };
     assert.equal(burnPit(game, last).ending, 'true');
     assert.equal(burnPit({ ...game, burned: [...game.burned, B1] }, last).ending, null);
   }
-  const almost = { ...newGame([B2, B5, A1]), outcome: 'win' };
+  const almost = { ...newGame([B2, B5, A1], pattern), outcome: 'win' };
   assert.equal(burnPit(almost, A2).ending, null);
 });
 

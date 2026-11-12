@@ -6,18 +6,24 @@ export const ROWS = [PLAYER, GRANNY].map((side) =>
   Array.from({ length: SMALL_PITS_PER_SIDE }, (_, column) => side * PITS_PER_SIDE + column),
 );
 export const STORES = ROWS.map((row) => row.at(-1) + 1);
-// Read from the player's seat, with Granny's row above the player's row.
-export const ESCAPE_PATTERN = [ROWS[GRANNY][1], ROWS[GRANNY][4], ROWS[PLAYER][0], ROWS[PLAYER][3]];
 
 // Pits in each row are indexed from screen left to right, as in the rules guide.
 const CLOCKWISE = [...ROWS[PLAYER].toReversed(), STORES[PLAYER], ...ROWS[GRANNY], STORES[GRANNY]];
 
-export function newGame(burned = []) {
+function drawEscapePattern() {
+  return [GRANNY, PLAYER].flatMap((side) => {
+    const candidates = [...ROWS[side]];
+    const [first] = candidates.splice(Math.floor(Math.random() * candidates.length), 1);
+    return [first, candidates[Math.floor(Math.random() * candidates.length)]];
+  });
+}
+
+export function newGame(burned = [], escapePattern = drawEscapePattern()) {
   const pits = Array(CLOCKWISE.length).fill(0);
   for (const pit of ROWS.flat()) {
     if (!burned.includes(pit)) pits[pit] = 4;
   }
-  return { pits, burned: [...burned], turn: PLAYER, outcome: null };
+  return { pits, burned: [...burned], escapePattern: [...escapePattern], turn: PLAYER, outcome: null };
 }
 
 export function legalPits({ pits, burned, turn, outcome }) {
@@ -31,8 +37,9 @@ export function burnablePits({ burned, outcome }) {
 export function burnPit(game, pit) {
   if (!burnablePits(game).includes(pit)) throw new RangeError('Choose an unburned small pit after winning.');
   const burned = [...game.burned, pit];
+  const { escapePattern } = game;
   let ending = null;
-  if (burned.length === ESCAPE_PATTERN.length && ESCAPE_PATTERN.every((mark) => burned.includes(mark))) {
+  if (burned.length === escapePattern.length && escapePattern.every((mark) => burned.includes(mark))) {
     ending = 'true';
   } else if (ROWS[GRANNY].every((smallPit) => burned.includes(smallPit))) {
     ending = 'false';
@@ -105,7 +112,7 @@ export function playMove(game, source) {
     outcome = difference === 0 ? 'draw' : difference > 0 ? 'win' : 'loss';
   }
 
-  return { game: { pits, burned, turn: bonus ? side : opponent, outcome }, steps, bonus, captured };
+  return { game: { ...game, pits, turn: bonus ? side : opponent, outcome }, steps, bonus, captured };
 }
 
 export function chooseGrannyPit(game, random = Math.random) {
