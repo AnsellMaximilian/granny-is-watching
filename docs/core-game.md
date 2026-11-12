@@ -8,9 +8,11 @@ The opening board has six small pits per side, four cowrie seeds per pit, and tw
 
 ## Win and burn a pit
 
-After each win, choose one unburned small pit on either side. The pit chars, and the next round starts automatically. Both sides skip that pit when sowing and can never select it again during the run. Each playable pit starts the next round with four seeds, and both stores start empty. Each burn reduces the next round's total by four.
+After each win, the camera returns to the seated view and Granny asks which patch of earth to burn. **Choose a pit** brings the camera back to the overhead board. Select one unburned small pit on either side. The camera moves in, and the pit flares for about a second before it chars.
 
-Burning the last playable small pit on either side completes the run. A draw lets the player replay with the same burned pits.
+The camera returns to Granny for her remark. Her question and remark change with each burn as the board runs out of fertile ground. Select **Next round** to return to play. Both sides skip burned pits when sowing and cannot select them again during the run. Each playable pit starts with four seeds and both stores start empty, so each burn reduces the next round's total by four.
+
+Burning the last playable small pit on either side completes the run. **Continue** shows the final result after Granny's remark. A draw lets the player replay with the same burned pits.
 
 ## Lose and face Granny
 

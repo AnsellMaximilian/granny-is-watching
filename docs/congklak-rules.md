@@ -252,7 +252,7 @@ In the opening round, if you finish with **31** seeds and Granny has **17**, you
 
 ### 10.4 Between rounds
 
-- **Win:** Choose one unburned small pit on either side to burn. The next round starts with four seeds in each playable pit and empty stores. Burned pits stay empty and both sides skip them. If your burn leaves either row with zero playable pits, you complete the run.
+- **Win:** Granny asks which pit to burn from across the table. Select **Choose a pit**, then choose one unburned small pit on either side. After it burns and Granny comments, select **Next round**. Each playable pit starts with four seeds and the stores start empty. Both sides skip burned pits. If either row has zero playable pits after the burn, **Continue** shows the final result.
 - **Draw:** Choose **Replay round** to reset the seeds with the same burned pits.
 - **Loss:** Granny lunges into a close stare and the game shows **Game over**. **Start a new run** restores the original board and returns to the wake-up scene.
 

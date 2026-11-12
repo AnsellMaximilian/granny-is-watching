@@ -1,10 +1,12 @@
 import earcut from 'earcut';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { PointLight } from '@babylonjs/core/Lights/pointLight';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { ROWS, STORES } from './congklak.js';
-import { grain, material, sphere } from './geometry.js';
+import { cylinder, grain, material, sphere } from './geometry.js';
 import { TABLE_HEIGHT } from './room.js';
 
 export const BOARD_TOP = TABLE_HEIGHT + 0.136;
@@ -129,9 +131,80 @@ function buildWood(scene, root) {
   };
 }
 
+function buildPitFire(scene, board, reducedMotion) {
+  const root = new TransformNode('Pit fire', scene);
+  root.parent = board;
+  root.setEnabled(false);
+
+  const amber = material(scene, 'Orange fire', '#ed5c20');
+  amber.emissiveColor = new Color3(0.96, 0.19, 0.025);
+  amber.disableLighting = true;
+  const gold = material(scene, 'Fire heart', '#ffd087');
+  gold.emissiveColor = new Color3(1, 0.67, 0.20);
+  gold.disableLighting = true;
+  const tongues = [
+    [0, 0, 0.255, 0.114, amber],
+    [-0.041, 0.018, 0.163, 0.077, amber],
+    [0.039, -0.013, 0.185, 0.082, amber],
+    [0.006, 0.032, 0.143, 0.070, gold],
+  ].map(([x, z, height, width, surface], index) => ({
+    height,
+    mesh: cylinder(scene, root, 'Pit flame ' + index, surface, x, height / 2, z, 0.004, width, height, 5),
+  }));
+  const sparks = Array.from({ length: 7 }, (_, index) =>
+    sphere(scene, root, 'Fire ember ' + index, gold, 0, 0, 0, 0.011, 0.016, 0.011, 4),
+  );
+  const light = new PointLight('Burning pit light', Vector3.Zero(), scene);
+  light.diffuse = new Color3(1, 0.36, 0.10);
+  light.range = 0.86;
+  light.renderPriority = 1;
+  light.setEnabled(false);
+
+  function ignite(pit) {
+    const { x, z } = PITS[pit];
+    root.position.set(x, BOARD_TOP - 0.025, z);
+    light.position.set(x, BOARD_TOP + 0.12, z);
+    light.intensity = 0;
+    root.setEnabled(true);
+    light.setEnabled(true);
+    const start = performance.now();
+    return new Promise((resolve) => {
+      const observer = scene.onBeforeRenderObservable.add(() => {
+        const elapsed = (performance.now() - start) / 1000;
+        if (elapsed >= 1) {
+          scene.onBeforeRenderObservable.remove(observer);
+          root.setEnabled(false);
+          light.setEnabled(false);
+          resolve();
+          return;
+        }
+
+        const strength = reducedMotion ? 0.66 : Math.min(1, elapsed * 11, (1 - elapsed) * 5);
+        for (const [i, { mesh, height }] of tongues.entries()) {
+          const wave = reducedMotion ? 0 : Math.sin(elapsed * (24 + i * 4) + i * 1.7);
+          const size = strength * (0.94 + wave * 0.13);
+          mesh.scaling.set(0.65 + strength * 0.35, size, 0.65 + strength * 0.35);
+          mesh.position.y = height * size / 2;
+          mesh.rotation.z = (i - 1.5) * 0.09 + wave * 0.12;
+        }
+        for (const [i, spark] of sparks.entries()) {
+          const rise = (elapsed - i * 0.075) / 0.48;
+          spark.setEnabled(!reducedMotion && rise > 0 && rise < 1);
+          const angle = i * 2.399963;
+          spark.position.set(Math.cos(angle) * rise * 0.10, 0.07 + rise * 0.29, Math.sin(angle) * rise * 0.10);
+        }
+        light.intensity = strength * 0.7;
+      });
+    });
+  }
+
+  return { ignite, meshes: [...tongues.map(({ mesh }) => mesh), ...sparks] };
+}
+
 export function buildBoard(scene, initialCounts, reducedMotion) {
   const root = new TransformNode('Congklak board', scene);
   const setBurned = buildWood(scene, root);
+  const fire = buildPitFire(scene, root, reducedMotion);
   const shellMaterial = material(scene, 'Ivory cowrie shell', '#edd1a0');
   const seamMaterial = material(scene, 'Brown shell seam', '#805439');
   const glow = material(scene, 'Seed landing highlight', '#e7ab60');
@@ -245,6 +318,8 @@ export function buildBoard(scene, initialCounts, reducedMotion) {
 
   reset(initialCounts);
   return {
+    ignite: fire.ignite,
+    fireMeshes: fire.meshes,
     reset,
     setBurned,
     lift(pit, ms) {

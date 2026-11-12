@@ -11,6 +11,7 @@ import { GLTFFileLoader } from '@babylonjs/loaders/glTF/2.0/glTFLoader';
 import { buildRoom } from './room.js';
 import { BOARD_TOP, PITS, buildBoard } from './board.js';
 import { PLAYER, GRANNY, ROWS, STORES, burnablePits, burnPit, chooseGrannyPit, legalPits, newGame, playMove } from './congklak.js';
+import { BURN_DIALOGUE } from './burn-dialogue.js';
 
 const $ = (id) => document.getElementById(id);
 const wake = $('wake');
@@ -18,6 +19,8 @@ const sit = $('sit');
 const again = $('again');
 const match = $('match');
 const result = $('result');
+const dialogue = $('burn-dialogue');
+const dialogueButton = $('dialogue-continue');
 const canvas = $('scene');
 const handCount = $('hand-count');
 const PIT_CHOICE_HINT = 'Choose an occupied pit on the near row. You can also press 1–' + ROWS[PLAYER].length + '.';
@@ -77,6 +80,7 @@ async function launch() {
   for (const flame of room.flames) glow.addIncludedOnlyMesh(flame);
   let game = newGame();
   const board = buildBoard(scene, game.pits, reducedMotion);
+  for (const flame of board.fireMeshes) glow.addIncludedOnlyMesh(flame);
 
   RegisterSceneLoaderPlugin(new GLTFFileLoader());
   const granny = await LoadAssetContainerAsync(modelUrl, scene);
@@ -101,6 +105,8 @@ async function launch() {
   let phaseStart = performance.now();
   let busy = false;
   let stare;
+  let tableShot;
+  let burnLine;
   const displayed = [...game.pits];
   const layer = $('pit-layer');
   const counts = PITS.map((_, i) => {
@@ -152,6 +158,44 @@ async function launch() {
     const height = 1.65;
     const fov = 2 * Math.atan(Math.max(1.18, 2.82 / aspect) / (2 * height));
     return { position: [0, BOARD_TOP + height, 0.045], target: [0, BOARD_TOP, 0], roll: 0, fov };
+  }
+
+  const overheadShot = () => ({ pose: overheadPose(), overhead: 1 });
+  const seatedShot = () => ({ pose: SEATED_POSE, overhead: 0 });
+
+  function fireShot(pit) {
+    const { x, z } = PITS[pit];
+    return {
+      pose: {
+        position: [x + 0.14, BOARD_TOP + 0.70, z + 0.76],
+        target: [x, BOARD_TOP + 0.10, z],
+        roll: 0,
+        fov: 0.62,
+      },
+      overhead: 0.38,
+    };
+  }
+
+  function panTableTo(to, ms) {
+    const from = tableShot ?? overheadShot;
+    const start = performance.now();
+    return new Promise((resolve) => {
+      tableShot = (now) => {
+        const t = reducedMotion ? 1 : Math.min(1, (now - start) / ms);
+        const end = to();
+        if (t === 1) {
+          tableShot = to;
+          resolve();
+          return end;
+        }
+        const first = from();
+        const amount = ease(t);
+        return {
+          pose: blendPose(first.pose, end.pose, amount),
+          overhead: first.overhead + (end.overhead - first.overhead) * amount,
+        };
+      };
+    });
   }
 
   function layOutPits() {
@@ -218,6 +262,7 @@ async function launch() {
   }
 
   function enterMatch() {
+    tableShot = undefined;
     game = newGame(game.burned);
     board.reset(game.pits);
     board.setBurned(game.burned);
@@ -235,8 +280,7 @@ async function launch() {
 
   function endMatch() {
     if (game.outcome === 'win') {
-      phase = 'burn';
-      status('You win', 'Choose a small pit on either side to burn.');
+      void offerBurn();
     } else if (game.outcome === 'draw') {
       phase = 'draw';
       status('A draw', 'Replay with the same pits.');
@@ -251,7 +295,6 @@ async function launch() {
       };
     }
     updatePitButtons();
-    if (phase === 'burn') counts[burnablePits(game)[0]].element.focus({ preventScroll: true });
   }
 
   function showResult(title, button) {
@@ -264,20 +307,54 @@ async function launch() {
     again.focus({ preventScroll: true });
   }
 
+  function speak(line, action) {
+    $('granny-line').textContent = '“' + line + '”';
+    dialogueButton.textContent = action;
+    dialogue.hidden = false;
+    dialogueButton.focus({ preventScroll: true });
+    return new Promise((resolve) => {
+      dialogueButton.addEventListener('click', () => {
+        dialogue.hidden = true;
+        resolve();
+      }, { once: true });
+    });
+  }
+
+  async function offerBurn() {
+    phase = 'burn-scene';
+    match.hidden = true;
+    burnLine = BURN_DIALOGUE[game.burned.length] ?? BURN_DIALOGUE.at(-1);
+    await panTableTo(seatedShot, 850);
+    await speak(burnLine.ask, 'Choose a pit');
+    await panTableTo(overheadShot, 700);
+    phase = 'burn';
+    match.hidden = false;
+    status('You win', 'Choose a small pit on either side to burn.');
+    layOutPits();
+    updatePitButtons();
+    counts[burnablePits(game)[0]].element.focus({ preventScroll: true });
+  }
+
   async function selectBurn(pit) {
     if (phase !== 'burn' || !burnablePits(game).includes(pit)) return;
     const { burned, complete } = burnPit(game, pit);
-    phase = 'burning';
-    game = { ...game, burned };
+    phase = 'burn-scene';
     updatePitButtons();
+    match.hidden = true;
+    await panTableTo(() => fireShot(pit), 450);
+    await board.ignite(pit);
+    game = { ...game, burned };
     board.setBurned(burned);
     showCount(pit, 0);
-    mark(pit);
-    status('Pit burned', complete ? 'A row has no playable pits left.' : 'Both sides will skip this pit.');
-    await wait(850);
+    await wait(250);
+    await panTableTo(seatedShot, 650);
+    await speak(burnLine.after, complete ? 'Continue' : 'Next round');
+    await panTableTo(overheadShot, 700);
     if (complete) {
       phase = 'victory';
-      mark();
+      match.hidden = false;
+      layOutPits();
+      status('You survived', 'A row has no playable pits left.');
       showResult('You survived', 'Start a new run');
     } else {
       enterMatch();
@@ -426,6 +503,10 @@ async function launch() {
         phase = 'game-over';
         showResult('Game over', 'Start a new run');
       }
+    } else if (tableShot) {
+      const shot = tableShot(now);
+      overhead = shot.overhead;
+      view(shot.pose);
     } else if (!match.hidden) {
       overhead = 1;
       view(overheadPose());

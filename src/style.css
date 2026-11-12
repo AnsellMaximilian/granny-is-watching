@@ -81,6 +81,27 @@ button:focus-visible { outline: 2px solid #ffe0a8; outline-offset: 4px; }
   text-shadow: 0 2px 12px black, 0 2px 5px black;
 }
 
+.burn-dialogue {
+  position: absolute;
+  inset: auto 0 clamp(20px, 7vh, 64px);
+  width: min(90%, 650px);
+  margin-inline: auto;
+  padding: 18px clamp(20px, 4vw, 36px) 20px;
+  text-align: center;
+  border-top: 1px solid #aa775e;
+  background: linear-gradient(#180f0df5, #100907ee);
+  box-shadow: 0 10px 35px #10090780;
+}
+.dialogue-speaker {
+  margin: 0 0 9px;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.dialogue-line { margin: 0 0 18px; font: italic clamp(1.24rem, 2.7vw, 1.7rem)/1.28 var(--serif); }
+
 #match { position: absolute; inset: 0; pointer-events: none; }
 #match::before {
   content: "";
