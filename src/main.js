@@ -19,6 +19,7 @@ const again = $('again');
 const match = $('match');
 const canvas = $('scene');
 const handCount = $('hand-count');
+const PIT_CHOICE_HINT = 'Choose an occupied pit on the near row. You can also press 1–' + ROWS[PLAYER].length + '.';
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const modelUrl = import.meta.env.BASE_URL + 'models/granny.glb';
 
@@ -188,7 +189,7 @@ async function launch() {
     phase = 'game';
     match.hidden = false;
     $('result').hidden = true;
-    status('Your turn', 'Choose an occupied pit on the near row. You can also press 1–7.');
+    status('Your turn', PIT_CHOICE_HINT);
     updatePitButtons();
     layOutPits();
   }
@@ -281,7 +282,7 @@ async function launch() {
     if (game.outcome) {
       endMatch();
     } else {
-      status(move.bonus ? 'Play again' : 'Your turn', 'Choose an occupied pit on the near row. You can also press 1–7.');
+      status(move.bonus ? 'Play again' : 'Your turn', PIT_CHOICE_HINT);
       updatePitButtons();
     }
   }
@@ -300,7 +301,8 @@ async function launch() {
   again.addEventListener('click', enterMatch);
   window.addEventListener('keydown', (event) => {
     if (event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
-    if (/^[1-7]$/.test(event.key)) void selectPit(ROWS[PLAYER][Number(event.key) - 1]);
+    const pit = ROWS[PLAYER][Number(event.key) - 1];
+    if (pit !== undefined) void selectPit(pit);
   });
   window.addEventListener('resize', () => engine.resize());
 

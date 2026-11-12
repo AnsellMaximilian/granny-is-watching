@@ -9,10 +9,12 @@ import { TABLE_HEIGHT } from './room.js';
 
 export const BOARD_TOP = TABLE_HEIGHT + 0.136;
 const SEGMENTS = 20;
-const centers = Array(16);
+const ROW_HALF_WIDTH = 0.738;
+const centers = Array(ROWS.flat().length + STORES.length);
 for (const [side, row] of ROWS.entries()) {
   for (const [column, pit] of row.entries()) {
-    centers[pit] = { x: (column - 3) * 0.246, z: side === 0 ? 0.155 : -0.155, rx: 0.106, rz: 0.108 };
+    const x = (2 * column / (row.length - 1) - 1) * ROW_HALF_WIDTH;
+    centers[pit] = { x, z: side === 0 ? 0.155 : -0.155, rx: 0.106, rz: 0.108 };
   }
 }
 for (const [side, pit] of STORES.entries()) {
@@ -97,7 +99,7 @@ function buildWood(scene, root) {
   for (let i = 0; i < indices.length; i += 3) [indices[i], indices[i + 1]] = [indices[i + 1], indices[i]];
   const positions = points.flatMap(([x, z]) => [x, BOARD_TOP, z]);
   const uvs = points.flatMap(([x, z]) => [(x + 1.23) / 2.46, (z + 0.34) / 0.68]);
-  makeMesh('Carved top with sixteen openings', scene, root, face, positions, indices, uvs);
+  makeMesh('Carved board top', scene, root, face, positions, indices, uvs);
   band('Beveled outer edge', scene, root, bevel, [
     { points: outline(1), y: BOARD_TOP },
     { points: outline(1.014), y: BOARD_TOP - 0.020 },

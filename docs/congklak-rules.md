@@ -3,7 +3,7 @@
 **A traditional Indonesian two-player seed-sowing game**  
 **Also known as:** *dakon*, *dhakon*, *congkak* (names vary by region)  
 **Document type:** Detailed, self-contained rules reference  
-**Edition:** Seven pits per side with five starting seeds per pit\
+**Edition:** Six small pits per side with five starting seeds per pit\
 **Last prepared:** 12 November 2026
 
 > **Regional rules.** Indonesian families, schools, clubs, and regions may differ on who starts, how a capture works, and when a new round starts. Sections 1–12 describe the version played in *Granny is Watching*. Section 13 gives context on other customs.
@@ -38,8 +38,8 @@
 | Feature | Granny is Watching |
 |---|---|
 | Players | You and Granny |
-| Board | 14 small pits (7 per player) and 2 large scoring stores |
-| Seeds | 70 total, with 5 in each small pit at the start |
+| Board | 12 small pits (6 per player) and 2 large scoring stores |
+| Seeds | 60 total, with 5 in each small pit at the start |
 | Stores at setup | Empty |
 | First player | You start every round |
 | Direction | Clockwise around the board, **toward your own store** along your own row; skip the opponent's store |
@@ -62,18 +62,18 @@ Despite its simple physical equipment, Congklak rewards counting, anticipation, 
 
 You need:
 
-- **One Congklak board** with **two parallel rows of seven small pits** and **one large store at each end** (16 pits in total).
-- **70 small counters** for this setup. Traditionally players use seeds, shells, or small stones. Identical beads also work.
+- **One Congklak board** with **two parallel rows of six small pits** and **one large store at each end** (14 pits in total).
+- **60 small counters** for this setup. Traditionally players use seeds, shells, or small stones. Identical beads also work.
 - **Two players**, seated on opposite sides of the board.
 
 Each player owns:
 
-- The **seven small pits directly in front of them**; and
+- The **six small pits directly in front of them**
 - The **large store to their left from their own seated perspective** in the orientation used below.
 
 The large scoring pit is called a **store**, **home**, **house**, *rumah*, or *lumbung*. The small pits may be called **houses**, **fields**, or *lubang kecil*, depending on the speaker and local tradition.
 
-> **For improvised play:** Draw 14 small circles in two rows and one large circle at either end on paper or cardboard. Use 70 dry beans, stones, or counters. If playing with young children, use counters large enough to avoid choking hazards.
+> **For improvised play:** Draw 12 small circles in two rows and one large circle at either end on paper or cardboard. Use 60 dry beans, stones, or counters. If playing with young children, use counters large enough to avoid choking hazards.
 
 ## 4. Board diagram and direction
 
@@ -83,25 +83,25 @@ This diagram shows the view from above. **You are Player A at the bottom. Granny
                         PLAYER B
                   sow this row  --->
 
-                 B's seven small pits
+                 B's six small pits
           +----+----+----+----+----+----+----+
-          | B1 | B2 | B3 | B4 | B5 | B6 | B7 |       [ B STORE ]
+          | B1 | B2 | B3 | B4 | B5 | B6 |       [ B STORE ]
 [ A STORE ]                                   
-          | A1 | A2 | A3 | A4 | A5 | A6 | A7 |
+          | A1 | A2 | A3 | A4 | A5 | A6 |
           +----+----+----+----+----+----+----+
-                 A's seven small pits
+                 A's six small pits
                   <--- sow this row
                         PLAYER A
 ```
 
-**Labels:** A1–A7 are Player A's pits; B1–B7 are Player B's pits. A1 and B1 are the leftmost opposing pair in this diagram; A7 and B7 are the rightmost opposing pair.
+A1–A6 are Player A's pits, and B1–B6 are Player B's. A1 and B1 face each other on the left. A6 and B6 face each other on the right.
 
 For complete precision, follow these paths:
 
-- **Player A:** `A7 → A6 → A5 → A4 → A3 → A2 → A1 → A STORE → B1 → B2 → B3 → B4 → B5 → B6 → B7 → A7 → ...`
-- **Player B:** `B1 → B2 → B3 → B4 → B5 → B6 → B7 → B STORE → A7 → A6 → A5 → A4 → A3 → A2 → A1 → B1 → ...`
+- **Player A** follows `A6 → A5 → A4 → A3 → A2 → A1 → A STORE → B1 → B2 → B3 → B4 → B5 → B6 → A6 → ...`
+- **Player B** follows `B1 → B2 → B3 → B4 → B5 → B6 → B STORE → A6 → A5 → A4 → A3 → A2 → A1 → B1 → ...`
 
-**Both players always skip their opponent's store.** That is why A's path jumps from B7 back to A7, while B's path jumps from A1 back to B1. The arrows and paths—not the physical location of the board on the table—are the definitive movement instructions for this guide.
+**Both players always skip their opponent's store.** A goes directly from B6 to A6, and B goes directly from A1 to B1.
 
 Note that some photographs and instructional diagrams mirror the board. Mirroring is harmless so long as the agreed sowing direction and store ownership remain consistent.
 
@@ -112,22 +112,22 @@ Your goal is to place **more seeds into your own store** than your opponent plac
 - Every seed in your store counts as **one point**.
 - A seed entering a store **stays there** for the rest of that game.
 - Seeds still in the small pits are **not yet scored**, except when collected during a capture or the end-of-game sweep.
-- After all remaining seeds are collected, the two scores add up to **70**.
+- After all remaining seeds are collected, the two scores add up to **60**.
 
-A final score of **35–35** is a draw.
+A final score of **30–30** is a draw.
 
 ## 6. Setup
 
 1. Choose **Wake up**, then **Sit down** when Granny points you to your seat. The camera moves to the overhead board.
-2. Your seven small pits are in the near row and Granny's are in the far row. Your store is on the left and hers is on the right.
-3. The game puts **5 seeds into each of the 14 small pits** for a total of `14 × 5 = 70` and leaves both stores **empty**.
+2. Your six small pits are in the near row and Granny's are in the far row. Your store is on the left and hers is on the right.
+3. The game puts **5 seeds into each of the 12 small pits** for a total of `12 × 5 = 60` and leaves both stores **empty**.
 4. You make the first move. One side sows at a time.
 
 **Initial count:**
 
 ```text
-B STORE: 0   B1 B2 B3 B4 B5 B6 B7: 5 5 5 5 5 5 5
-A STORE: 0   A1 A2 A3 A4 A5 A6 A7: 5 5 5 5 5 5 5
+B STORE: 0   B1 B2 B3 B4 B5 B6: 5 5 5 5 5 5
+A STORE: 0   A1 A2 A3 A4 A5 A6: 5 5 5 5 5 5
 ```
 
 ## 7. Legal moves and sowing
@@ -136,7 +136,7 @@ A STORE: 0   A1 A2 A3 A4 A5 A6 A7: 5 5 5 5 5 5 5
 
 On your turn, choose **one small pit on your own side** containing at least one seed. You may not begin a move from an opponent's pit, a store, or an empty pit.
 
-Click an occupied pit on the near row or press **1–7** for pits **A1–A7** from left to right. Granny picks a legal pit automatically. Her row and store highlight briefly while she chooses.
+Click an occupied pit on the near row or press **1–6** for pits **A1–A6** from left to right. Granny picks a legal pit automatically. Her row and store highlight briefly while she chooses.
 
 ### 7.2 Picking up seeds
 
@@ -188,7 +188,7 @@ Suppose the last seed lands in a small pit that contained 3 seeds just before yo
 If the last seed falls into **your own** store:
 
 1. Keep that seed in your store.
-2. Look at your own seven small pits.
+2. Look at your own six small pits.
 3. Choose **any occupied** pit among them.
 4. Pick up all its seeds and start a new sowing along your normal path.
 
@@ -232,11 +232,11 @@ If your final seed lands in an empty pit on your side but the opposite pit is **
 
 ### 10.1 When the game ends
 
-The game checks for an empty row after all sowing, relays, and any capture from the current move have resolved. If either player has **no seeds in any of their seven small pits**, the round ends before the next move or bonus turn.
+The game checks for an empty row after all sowing, relays, and any capture from the current move have resolved. If either player has **no seeds in any of their six small pits**, the round ends before the next move or bonus turn.
 
 ### 10.2 Collect remaining seeds (the sweep)
 
-If one side is empty and the other side still has seeds, the player with remaining seeds **takes all seeds left in their own seven small pits and puts them into their own store**.
+If one side is empty and the other side still has seeds, the player with remaining seeds **takes all seeds left in their six small pits and puts them into their own store**.
 
 In the unusual event both rows are already empty, there is nothing to sweep.
 
@@ -247,9 +247,9 @@ In the unusual event both rows are already empty, there is nothing to sweep.
 3. The higher count wins.
 4. Equal counts mean a **draw**.
 
-If you finish with **41** seeds and Granny has **29**, you win by **12**. The two stores account for all **70** seeds.
+If you finish with **37** seeds and Granny has **23**, you win by **14**. The two stores account for all **60** seeds.
 
-The result screen shows both scores. **Play again** resets all 14 small pits to five seeds, empties both stores, and gives you the first move.
+The result screen shows both scores. **Play again** resets all 12 small pits to five seeds, empties both stores, and gives you the first move.
 
 > **Not the same as every traditional multi-round game:** Some households distinguish a round ending when one player runs out of playable seeds (*menang jalan*) from ultimately winning by seeds (*menang biji*), then redistribute the seeds for another round. See Section 13 for that style.
 
@@ -367,7 +367,7 @@ Yes. Pit and store counts are visible on both sides. Your pit labels sit on the 
 If both players know the last valid position, restore it and replay the move. If not, agree to reconstruct it, restart, or adjudicate fairly. These are suggested etiquette rules, not a universal historical custom.
 
 **How many seeds should be on the board at any moment?**  
-The **70 seeds** are always accounted for across both rows, both stores, and any seeds in hand or in transit.
+The **60 seeds** are always accounted for across both rows, both stores, and any seeds in hand or in transit.
 
 ## 13. Regional and house-rule variations
 
@@ -436,7 +436,7 @@ Some apps or organized play formats add match points, fixed thinking times, or p
 
 ## 14. Playing multiple games and tournaments
 
-In *Granny is Watching*, each replay is a fresh 70-seed round. For tabletop play, the following match formats can use the same five-seed setup.
+In *Granny is Watching*, each replay is a fresh 60-seed round. For tabletop play, the following match formats can use the same five-seed setup.
 
 - **Best of three:** First player to win two games wins the match; if games can draw, agree how ties affect the count.
 - **Three-game points format:** Award **2 match points for a win, 1 each for a draw, 0 for a loss**. Higher total wins.
@@ -484,12 +484,12 @@ For organized play, record the following in advance: sowing path; capture method
 CONGKLAK IN GRANNY IS WATCHING
 
 SETUP
-  7 small pits per side and 2 large stores.
-  5 seeds in each small pit, 70 total.
+  6 small pits per side and 2 large stores.
+  5 seeds in each small pit, 60 total.
   Both stores start empty. You play first.
 
 YOUR TURN
-  1. Click an OCCUPIED pit on YOUR row or press 1–7.
+  1. Click an OCCUPIED pit on YOUR row or press 1–6.
   2. Pick up ALL its seeds.
   3. Sow 1 in each successive pit clockwise.
   4. Include YOUR store; SKIP opponent's store.
@@ -510,7 +510,7 @@ WHEN YOUR LAST SEED LANDS...
 FINISH
   After a move resolves, an empty row ends the round.
   Sweep any remaining seeds into their owner's store.
-  Most seeds wins. A 35–35 score is a draw.
+  Most seeds wins. A 30–30 score is a draw.
   Play again resets the board and gives you the first move.
 ```
 
