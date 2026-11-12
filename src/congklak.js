@@ -10,14 +10,27 @@ export const STORES = ROWS.map((row) => row.at(-1) + 1);
 // Pits in each row are indexed from screen left to right, as in the rules guide.
 const CLOCKWISE = [...ROWS[PLAYER].toReversed(), STORES[PLAYER], ...ROWS[GRANNY], STORES[GRANNY]];
 
-export function newGame() {
-  const pits = Array(CLOCKWISE.length).fill(4);
-  for (const store of STORES) pits[store] = 0;
-  return { pits, turn: PLAYER, outcome: null };
+export function newGame(burned = []) {
+  const pits = Array(CLOCKWISE.length).fill(0);
+  for (const pit of ROWS.flat()) {
+    if (!burned.includes(pit)) pits[pit] = 4;
+  }
+  return { pits, burned: [...burned], turn: PLAYER, outcome: null };
 }
 
-export function legalPits({ pits, turn, outcome }) {
-  return outcome ? [] : ROWS[turn].filter((pit) => pits[pit] > 0);
+export function legalPits({ pits, burned, turn, outcome }) {
+  return outcome ? [] : ROWS[turn].filter((pit) => !burned.includes(pit) && pits[pit] > 0);
+}
+
+export function burnablePits({ burned, outcome }) {
+  return outcome === 'win' ? ROWS.flat().filter((pit) => !burned.includes(pit)) : [];
+}
+
+export function burnPit(game, pit) {
+  if (!burnablePits(game).includes(pit)) throw new RangeError('Choose an unburned small pit after winning.');
+  const burned = [...game.burned, pit];
+  const complete = ROWS.some((row) => row.every((smallPit) => burned.includes(smallPit)));
+  return { burned, complete };
 }
 
 export function playMove(game, source) {
@@ -28,7 +41,8 @@ export function playMove(game, source) {
   const side = game.turn;
   const opponent = 1 - side;
   const store = STORES[side];
-  const path = CLOCKWISE.filter((pit) => pit !== STORES[opponent]);
+  const { burned } = game;
+  const path = CLOCKWISE.filter((pit) => pit !== STORES[opponent] && !burned.includes(pit));
   let cursor = path.indexOf(source);
   let landing = source;
   let bonus = false;
@@ -59,7 +73,7 @@ export function playMove(game, source) {
   const column = ROWS[side].indexOf(landing);
   if (!bonus && column !== -1) {
     const opposite = ROWS[opponent][column];
-    if (pits[opposite] > 0) {
+    if (!burned.includes(opposite) && pits[opposite] > 0) {
       captured = pits[opposite] + 1;
       steps.push({ kind: 'capture', pit: landing, count: captured, emptied: [opposite] });
       pits[landing] = 0;
@@ -82,7 +96,7 @@ export function playMove(game, source) {
     outcome = difference === 0 ? 'draw' : difference > 0 ? 'win' : 'loss';
   }
 
-  return { game: { pits, turn: bonus ? side : opponent, outcome }, steps, bonus, captured };
+  return { game: { pits, burned, turn: bonus ? side : opponent, outcome }, steps, bonus, captured };
 }
 
 export function chooseGrannyPit(game, random = Math.random) {

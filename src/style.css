@@ -104,6 +104,8 @@ button:focus-visible { outline: 2px solid #ffe0a8; outline-offset: 4px; }
   text-shadow: 0 2px 8px #100907;
 }
 .scoreboard h2 { font: 400 clamp(1.6rem, 3vw, 2.6rem)/1 var(--serif); margin: 0; }
+.round-heading { text-align: center; }
+.round-heading p { margin: 5px 0 0; color: var(--muted); font-size: 0.85rem; }
 .score { display: flex; gap: clamp(9px, 1.5vw, 22px); align-items: baseline; }
 .score strong { font: 400 clamp(1.65rem, 3vw, 2.45rem)/1 var(--serif); font-variant-numeric: tabular-nums; }
 .score span { font-size: 0.85rem; font-weight: 600; letter-spacing: 0.13em; text-transform: uppercase; }
@@ -144,6 +146,11 @@ button.pit-count:hover, button.pit-count:focus-visible { background: #ffbc6e25; 
 .pit-count.granny-side { align-items: start; }
 .pit-count.store { padding-bottom: 0.6rem; }
 .pit-count.store.granny-side { padding-block: 0.6rem 0; }
+.pit-count.burned { place-items: center; }
+button.pit-count.burned span { color: #ae8f77; border-color: #644a3b; background: #190f0c; }
+.pit-count.burned.active span { background: #ed8b48; }
+button.pit-count.burnable { border-color: #e48b57; background: #d7622a30; }
+button.pit-count.burnable:hover, button.pit-count.burnable:focus-visible { background: #ee8e4866; }
 .turn {
   position: absolute;
   bottom: clamp(18px, 6vh, 70px);
@@ -176,4 +183,11 @@ button.pit-count:hover, button.pit-count:focus-visible { background: #ffbc6e25; 
 }
 .result-card h2 { font: 400 clamp(2.5rem, 6vw, 4.5rem)/1 var(--serif); margin: 0; }
 .result-card p { color: var(--muted); margin: 18px 0 25px; font-size: 1.1rem; }
+.result.game-over {
+  place-items: end center;
+  padding-bottom: clamp(22px, 6vh, 54px);
+  background: linear-gradient(transparent 20%, #0a070655 55%, #0a0706e6);
+}
+.game-over .result-card { padding: 24px 30px; }
+.game-over .result-card p { margin: 12px 0 17px; }
 .error { position: absolute; inset: auto 20px 20px; background: var(--panel); padding: 14px; z-index: 3; }

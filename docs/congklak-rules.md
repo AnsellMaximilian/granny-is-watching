@@ -39,16 +39,17 @@
 |---|---|
 | Players | You and Granny |
 | Board | 12 small pits (6 per player) and 2 large scoring stores |
-| Seeds | 48 total, with 4 in each small pit at the start |
+| Seeds | 48 in the opening round, with 4 per playable small pit |
 | Stores at setup | Empty |
 | First player | You start every round |
-| Direction | Clockwise around the board, **toward your own store** along your own row; skip the opponent's store |
+| Direction | Clockwise around the board toward your own store on your row. Skip burned pits and the opponent's store. |
 | Core action | Pick up all seeds from one of your occupied small pits and distribute them one by one |
 | Relay sowing | If the final seed lands in a previously occupied small pit, pick up the resulting contents and keep sowing |
 | Bonus turn | If the final seed lands in your own store and both rows still contain seeds |
 | Capture (*tembak*) | If the final seed lands in an empty pit on your side and the opposite pit contains seeds |
 | End of one game | After a move resolves with either row empty |
 | Winner | Player with more seeds in their store after the remaining seeds are collected |
+| Progression | Win to burn one small pit on either side. Draw to replay the same board. Lose and the run ends. |
 
 ## 2. What Congklak is
 
@@ -101,7 +102,7 @@ For complete precision, follow these paths:
 - **Player A** follows `A6 → A5 → A4 → A3 → A2 → A1 → A STORE → B1 → B2 → B3 → B4 → B5 → B6 → A6 → ...`
 - **Player B** follows `B1 → B2 → B3 → B4 → B5 → B6 → B STORE → A6 → A5 → A4 → A3 → A2 → A1 → B1 → ...`
 
-**Both players always skip their opponent's store.** A goes directly from B6 to A6, and B goes directly from A1 to B1.
+**Both players always skip their opponent's store.** On the opening board, A goes directly from B6 to A6, and B goes directly from A1 to B1. After a burn, both players also skip the burned pit and continue to the next eligible destination.
 
 Note that some photographs and instructional diagrams mirror the board. Mirroring is harmless so long as the agreed sowing direction and store ownership remain consistent.
 
@@ -112,15 +113,15 @@ Your goal is to place **more seeds into your own store** than your opponent plac
 - Every seed in your store counts as **one point**.
 - A seed entering a store **stays there** for the rest of that game.
 - Seeds still in the small pits are **not yet scored**, except when collected during a capture or the end-of-game sweep.
-- After all remaining seeds are collected, the two scores add up to **48**.
+- After all remaining seeds are collected, the scores add up to the number of seeds that started the round. The opening round starts with **48**.
 
-A final score of **24–24** is a draw.
+Equal scores are a draw, such as **24–24** in the opening round.
 
 ## 6. Setup
 
 1. Choose **Wake up**, then **Sit down** when Granny points you to your seat. The camera moves to the overhead board.
 2. Your six small pits are in the near row and Granny's are in the far row. Your store is on the left and hers is on the right.
-3. The game puts **4 seeds into each of the 12 small pits** for a total of `12 × 4 = 48` and leaves both stores **empty**.
+3. The game puts **4 seeds into each playable small pit** and leaves both stores **empty**. The opening round has `12 × 4 = 48` seeds. A burned pit starts every later round empty.
 4. You make the first move. One side sows at a time.
 
 **Initial count:**
@@ -134,7 +135,7 @@ A STORE: 0   A1 A2 A3 A4 A5 A6: 4 4 4 4 4 4
 
 ### 7.1 Choosing a pit
 
-On your turn, choose **one small pit on your own side** containing at least one seed. You may not begin a move from an opponent's pit, a store, or an empty pit.
+On your turn, choose **one unburned small pit on your own side** containing at least one seed.
 
 Click an occupied pit on the near row or press **1–6** for pits **A1–A6** from left to right. Granny picks a legal pit automatically. Her row and store highlight briefly while she chooses.
 
@@ -148,9 +149,9 @@ Starting with the **next** pit along your sowing path, drop **exactly one** seed
 
 The game shows the full handful moving between pits. The pit count updates as each seed lands, and the board displays how many seeds remain in hand.
 
-- Include all small pits on both players' sides as you encounter them.
+- Include all unburned small pits on both players' sides as you encounter them.
 - Include **your own store** when your sowing path reaches it.
-- **Do not put a seed in your opponent's store**: jump over it.
+- Skip your opponent's store and every burned pit.
 - Do not drop a seed into the starting pit immediately on pickup; it receives a seed only if the ongoing distribution comes around to it again.
 - Keep the same movement direction throughout the entire turn, including after a relay sow.
 
@@ -215,9 +216,9 @@ All of the following must be true:
 
 **Example:** Player A's `A3` is empty, `B3` contains 5, and A finishes by placing one last seed into `A3`. A moves **6 seeds** to A's store: **5 from B3 + the 1 final seed from A3**.
 
-### 9.3 If the opposite pit is empty
+### 9.3 If the opposite pit is empty or burned
 
-If your final seed lands in an empty pit on your side but the opposite pit is **also empty**, there is **no capture**. In this edition, the final seed **stays in your small pit**, and your turn ends.
+If the opposite pit is empty or burned, the final seed **stays in your small pit** and your turn ends.
 
 ### 9.4 Capture limitations
 
@@ -247,9 +248,15 @@ In the unusual event both rows are already empty, there is nothing to sweep.
 3. The higher count wins.
 4. Equal counts mean a **draw**.
 
-If you finish with **31** seeds and Granny has **17**, you win by **14**. The two stores account for all **48** seeds.
+In the opening round, if you finish with **31** seeds and Granny has **17**, you win by **14**. The two stores account for all **48** seeds.
 
-The result screen shows both scores. **Play again** resets all 12 small pits to four seeds, empties both stores, and gives you the first move.
+### 10.4 Between rounds
+
+- **Win:** Choose one unburned small pit on either side to burn. The next round starts with four seeds in each playable pit and empty stores. Burned pits stay empty and both sides skip them. If your burn leaves either row with zero playable pits, you complete the run.
+- **Draw:** Choose **Replay round** to reset the seeds with the same burned pits.
+- **Loss:** Granny lunges into a close stare and the game shows **Game over**. **Start a new run** restores the original board and returns to the wake-up scene.
+
+See [core gameplay](core-game.md) for the full run flow.
 
 > **Not the same as every traditional multi-round game:** Some households distinguish a round ending when one player runs out of playable seeds (*menang jalan*) from ultimately winning by seeds (*menang biji*), then redistribute the seeds for another round. See Section 13 for that style.
 
@@ -327,10 +334,10 @@ After B finishes a move, all B small pits are empty. A still has 9 seeds scatter
 Not as the initial move or when starting a bonus turn. **Yes during a relay**: if your last seed falls into an already occupied small pit on the opponent's side, you must pick up the resulting contents and continue sowing.
 
 **Do I put seeds into my opponent's small pits?**  
-Yes. All small pits on both rows participate in ordinary sowing. Only the opponent's **large store** is skipped.
+Yes. You sow into all playable small pits on both rows. Skip burned pits and the opponent's store.
 
 **May I start from an empty pit?**  
-No. A legal starting pit must be on your side and contain at least one seed.
+Choose an unburned pit on your side that contains at least one seed.
 
 **What if my original pit is reached again?**  
 It receives seeds like any other small pit. The fact that you originally picked seeds from it does not block it.
@@ -366,7 +373,7 @@ Yes. Pit and store counts are visible on both sides. Your pit labels sit on the 
 If both players know the last valid position, restore it and replay the move. If not, agree to reconstruct it, restart, or adjudicate fairly. These are suggested etiquette rules, not a universal historical custom.
 
 **How many seeds should be on the board at any moment?**  
-The **48 seeds** are always accounted for across both rows, both stores, and any seeds in hand or in transit.
+The number of seeds at the start of the round stays constant across both rows, both stores, and any seeds in hand or in transit. The opening round has 48 seeds, and every burn removes four starting seeds from the next round.
 
 ## 13. Regional and house-rule variations
 
@@ -435,7 +442,7 @@ Some apps or organized play formats add match points, fixed thinking times, or p
 
 ## 14. Playing multiple games and tournaments
 
-In *Granny is Watching*, each replay is a fresh 48-seed round. For tabletop play, the following match formats can use the same four-seed setup.
+The following tabletop match formats can use the game's opening four-seed setup.
 
 - **Best of three:** First player to win two games wins the match; if games can draw, agree how ties affect the count.
 - **Three-game points format:** Award **2 match points for a win, 1 each for a draw, 0 for a loss**. Higher total wins.
@@ -484,14 +491,14 @@ CONGKLAK IN GRANNY IS WATCHING
 
 SETUP
   6 small pits per side and 2 large stores.
-  4 seeds in each small pit, 48 total.
+  4 seeds in each playable small pit, 48 in the opening round.
   Both stores start empty. You play first.
 
 YOUR TURN
   1. Click an OCCUPIED pit on YOUR row or press 1–6.
   2. Pick up ALL its seeds.
   3. Sow 1 in each successive pit clockwise.
-  4. Include YOUR store; SKIP opponent's store.
+  4. Include YOUR store. Skip burned pits and the opponent's store.
 
 WHEN YOUR LAST SEED LANDS...
   - In an OCCUPIED SMALL PIT:
@@ -509,8 +516,11 @@ WHEN YOUR LAST SEED LANDS...
 FINISH
   After a move resolves, an empty row ends the round.
   Sweep any remaining seeds into their owner's store.
-  Most seeds wins. A 24–24 score is a draw.
-  Play again resets the board and gives you the first move.
+  Most seeds wins. Equal scores are a draw.
+  Win: Burn one small pit. Both sides skip it in future rounds.
+  If either row has no playable pits after the burn, you complete the run.
+  Draw: Replay with the same burned pits.
+  Loss: Granny stares you down. Start a new run to reset the board.
 ```
 
 ---

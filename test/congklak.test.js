@@ -1,16 +1,17 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { GRANNY, PLAYER, ROWS, STORES, chooseGrannyPit, legalPits, newGame, playMove } from '../src/congklak.js';
+import { GRANNY, PLAYER, ROWS, STORES, burnablePits, burnPit, chooseGrannyPit, legalPits, newGame, playMove } from '../src/congklak.js';
 
 const [A1, A2, A3, A4, A5, A6] = ROWS[PLAYER];
 const [B1, B2, B3, B4, B5, B6] = ROWS[GRANNY];
 const [A_STORE, B_STORE] = STORES;
 
-function position(counts, turn = PLAYER) {
+function position(counts, turn = PLAYER, burned = []) {
+  const game = newGame(burned);
   return {
-    pits: Object.assign(newGame().pits.fill(0), counts),
+    ...game,
+    pits: Object.assign(game.pits.fill(0), counts),
     turn,
-    outcome: null,
   };
 }
 
@@ -81,6 +82,46 @@ test('moves reject empty pits, stores, and Granny’s row', () => {
   for (const pit of [A2, A_STORE, B1, B_STORE, game.pits.length]) assert.throws(() => playMove(game, pit), RangeError);
 });
 
+test('a win lets the player burn one open pit on either side for the next round', () => {
+  const game = { ...newGame([A2]), outcome: 'win' };
+  assert.ok(burnablePits(game).includes(A3));
+  assert.ok(burnablePits(game).includes(B4));
+  for (const pit of [A2, A_STORE, B_STORE]) assert.throws(() => burnPit(game, pit), RangeError);
+  for (const outcome of [null, 'draw', 'loss']) {
+    assert.throws(() => burnPit({ ...game, outcome }, B4), RangeError);
+  }
+  const { burned, complete } = burnPit(game, B4);
+  assert.equal(complete, false);
+  assert.deepEqual(game.burned, [A2]);
+  const next = newGame(burned);
+  assert.deepEqual(next.burned, [A2, B4]);
+  assert.equal(next.turn, PLAYER);
+  assert.equal(next.pits.reduce((sum, count) => sum + count, 0), 40);
+  assert.equal(next.pits[A2], 0);
+  assert.equal(next.pits[B4], 0);
+  assert.ok(!legalPits(next).includes(A2));
+  assert.ok(!legalPits({ ...next, turn: GRANNY }).includes(B4));
+});
+
+test('both sowing paths skip burned pits and a burned opposite pit cannot be captured', () => {
+  const burned = [A6, B1];
+  const fromA = playMove(position({ [A1]: 3, [A2]: 1, [B5]: 2 }, PLAYER, burned), A1);
+  assert.deepEqual(fromA.steps.filter(({ kind }) => kind === 'drop').map(({ pit }) => pit),
+    [A_STORE, B2, B3]);
+  const fromB = playMove(position({ [A1]: 1, [B2]: 1, [B6]: 3 }, GRANNY, burned), B6);
+  assert.deepEqual(fromB.steps.filter(({ kind }) => kind === 'drop').map(({ pit }) => pit),
+    [B_STORE, A5, A4]);
+  const final = playMove(position({ [A1]: 2, [A4]: 1, [B4]: 3 }, PLAYER, [B3]), A4);
+  assert.equal(final.captured, 0);
+  assert.equal(final.game.pits[A3], 1);
+  assert.equal(final.game.pits[B3], 0);
+});
+
+test('burning the last playable pit on a side completes the run', () => {
+  const game = { ...newGame(ROWS[GRANNY].slice(0, -1)), outcome: 'win' };
+  assert.equal(burnPit(game, B6).complete, true);
+});
+
 test('full rounds preserve all seeds in every animation step and reach both outcomes', () => {
   let seed = 52;
   const random = () => {
@@ -89,7 +130,9 @@ test('full rounds preserve all seeds in every animation step and reach both outc
   };
   const outcomes = new Set();
   for (let i = 0; i < 120; i++) {
-    let game = newGame();
+    const burned = i % 2 === 0 ? [] : [A3, B1, B6];
+    const total = 48 - burned.length * 4;
+    let game = newGame(burned);
     let moves = 0;
     while (!game.outcome) {
       assert.ok(moves++ < 500, 'the round must finish');
@@ -100,12 +143,13 @@ test('full rounds preserve all seeds in every animation step and reach both outc
       for (const step of next.steps) {
         step.emptied?.forEach((empty) => { rendered[empty] = 0; });
         rendered[step.pit] = step.count;
-        assert.equal(rendered.reduce((sum, count) => sum + count, step.hand ?? 0), 48);
+        assert.equal(rendered.reduce((sum, count) => sum + count, step.hand ?? 0), total);
+        assert.ok(burned.every((pit) => rendered[pit] === 0));
       }
       assert.deepEqual(rendered, next.game.pits);
       game = next.game;
     }
-    assert.equal(game.pits[A_STORE] + game.pits[B_STORE], 48);
+    assert.equal(game.pits[A_STORE] + game.pits[B_STORE], total);
     outcomes.add(game.outcome);
   }
   assert.ok(outcomes.has('win') && outcomes.has('loss'));

@@ -11,9 +11,9 @@ npm ci
 npm start
 ```
 
-Choose **Wake up**, then **Sit down**. On your turn, click an occupied pit on the near row or press **1–6** from left to right. Your store is on the left. A round ends when either row empties after sowing resolves. The game collects the remaining seeds and shows the final score. **Play again** starts a fresh round at the table.
+Choose **Wake up**, then **Sit down**. On your turn, click an occupied pit on the near row or press **1–6** from left to right. Your store is on the left. A round ends when either row empties after sowing resolves.
 
-Each side starts with six small pits and four seeds in each pit, for 48 seeds total. Relay sowing, *tembak*, and bonus turns follow the [single-round guide](docs/congklak-rules.md). The player opens each round. Granny chooses her moves from the legal pits. SmartSpectra is deferred to a later milestone.
+Each side starts with six small pits and four seeds in each pit, for 48 seeds total. Win to burn one pit for the rest of the run. Draw to replay the same board. Lose and Granny lunges into a close stare before game over. See [core gameplay](docs/core-game.md) and the [congklak rules](docs/congklak-rules.md).
 
 ## Develop
 

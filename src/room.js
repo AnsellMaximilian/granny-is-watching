@@ -127,7 +127,7 @@ export function buildRoom(scene) {
 
   return {
     flames: candles.flatMap(({ flame, ember }) => [flame, ember]),
-    update(time, overhead) {
+    update(time, overhead, stare) {
       for (let i = 0; i < candles.length; i++) {
         const { flame, ember, light, strength } = candles[i];
         const sway = Math.sin(time * 11.9 + i) * 0.095 + Math.sin(time * 19.1 + i) * 0.044;
@@ -137,6 +137,9 @@ export function buildRoom(scene) {
         light.intensity = strength * (1 + sway * 0.35);
       }
       boardLight.intensity = overhead * 0.62;
+      faceLight.position.set(-0.55 + 0.95 * stare, 1.49 + 0.09 * stare, 0.10 + 0.95 * stare);
+      faceLight.intensity = 0.47 + 0.52 * stare;
+      faceLight.range = 4.3 - 2.8 * stare;
     },
   };
 }

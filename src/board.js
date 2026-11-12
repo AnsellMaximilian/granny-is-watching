@@ -86,7 +86,9 @@ function buildWood(scene, root) {
   const bevel = material(scene, 'Worn lip of the board', '#ba865e', wood);
   const side = material(scene, 'Dark carved edge', '#77472d', wood);
   const cavity = material(scene, 'Oil-darkened pit interiors', '#794b32', wood);
-  for (const surface of [face, bevel, side, cavity]) surface.backFaceCulling = false;
+  const char = material(scene, 'Charred pit', '#271813', wood);
+  char.specularColor = Color3.Black();
+  for (const surface of [face, bevel, side, cavity, char]) surface.backFaceCulling = false;
 
   const holes = [];
   const points = outline(1);
@@ -110,18 +112,26 @@ function buildWood(scene, root) {
     { points: outline(0.982), y: TABLE_HEIGHT + 0.002 },
   ], { woodUvs: true });
 
-  for (const [i, { x, z, rx, rz }] of PITS.entries()) {
+  const cups = PITS.map(({ x, z, rx, rz }, i) => {
     const ring = (scale, depth) => ({ points: ellipse(x, z, rx * scale, rz * scale), y: BOARD_TOP - depth });
-    band('Rounded pit lip ' + i, scene, root, bevel, [ring(1, 0), ring(0.94, 0.010)], { woodUvs: true, inward: true });
-    band('Scooped wooden pit ' + i, scene, root, cavity, [
+    const lip = band('Rounded pit lip ' + i, scene, root, bevel, [ring(1, 0), ring(0.94, 0.010)], { woodUvs: true, inward: true });
+    const bowl = band('Scooped wooden pit ' + i, scene, root, cavity, [
       ring(0.94, 0.010), ring(0.83, 0.038), ring(0.61, 0.073), ring(0.36, 0.089), ring(0.0001, 0.091),
     ], { woodUvs: true, inward: true });
-  }
+    return { lip, bowl };
+  });
+  return (burned) => {
+    for (const [pit, { lip, bowl }] of cups.entries()) {
+      const scorched = burned.includes(pit);
+      lip.material = scorched ? char : bevel;
+      bowl.material = scorched ? char : cavity;
+    }
+  };
 }
 
 export function buildBoard(scene, initialCounts, reducedMotion) {
   const root = new TransformNode('Congklak board', scene);
-  buildWood(scene, root);
+  const setBurned = buildWood(scene, root);
   const shellMaterial = material(scene, 'Ivory cowrie shell', '#edd1a0');
   const seamMaterial = material(scene, 'Brown shell seam', '#805439');
   const glow = material(scene, 'Seed landing highlight', '#e7ab60');
@@ -192,6 +202,9 @@ export function buildBoard(scene, initialCounts, reducedMotion) {
         contents.push(parts);
       }
     }
+    for (const [slot, parts] of cowries.entries()) {
+      for (const part of parts) part.setEnabled(slot < index);
+    }
   }
 
   function moveShells(pile, destination, ms, height = 0) {
@@ -233,6 +246,7 @@ export function buildBoard(scene, initialCounts, reducedMotion) {
   reset(initialCounts);
   return {
     reset,
+    setBurned,
     lift(pit, ms) {
       hand.push(...shells[pit].splice(0));
       return moveShells(hand, (index) => handPose(pit, index), ms, 0.035);

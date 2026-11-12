@@ -10,13 +10,14 @@ import { GLTFFileLoader } from '@babylonjs/loaders/glTF/2.0/glTFLoader';
 
 import { buildRoom } from './room.js';
 import { BOARD_TOP, PITS, buildBoard } from './board.js';
-import { PLAYER, GRANNY, ROWS, STORES, chooseGrannyPit, legalPits, newGame, playMove } from './congklak.js';
+import { PLAYER, GRANNY, ROWS, STORES, burnablePits, burnPit, chooseGrannyPit, legalPits, newGame, playMove } from './congklak.js';
 
 const $ = (id) => document.getElementById(id);
 const wake = $('wake');
 const sit = $('sit');
 const again = $('again');
 const match = $('match');
+const result = $('result');
 const canvas = $('scene');
 const handCount = $('hand-count');
 const PIT_CHOICE_HINT = 'Choose an occupied pit on the near row. You can also press 1–' + ROWS[PLAYER].length + '.';
@@ -38,6 +39,7 @@ const INVITATION_TIME = WAKE_POSES.at(-1)[0];
 const SIT_DURATION = 1.05;
 const OVERHEAD_START = SIT_DURATION + 0.35;
 const OVERHEAD_DURATION = 1.05;
+const LOSS_DURATION = 1.55;
 const ease = (t) => t * t * (3 - 2 * t);
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -84,7 +86,9 @@ async function launch() {
     if ('maxSimultaneousLights' in surface) surface.maxSimultaneousLights = 6;
   }
   const introClip = granny.animationGroups[0];
-  if (!introClip) throw new Error('Granny’s intro animation is missing.');
+  const grannyRoot = granny.transformNodes.find((node) => node.name === 'Granny');
+  const grannyHead = granny.transformNodes.find((node) => node.name === 'Head');
+  if (!introClip || !grannyRoot || !grannyHead) throw new Error('Granny’s rig or intro animation is missing.');
   const introFps = introClip.targetedAnimations[0].animation.framePerSecond;
   introClip.start(false);
   introClip.pause();
@@ -96,10 +100,11 @@ async function launch() {
   let phase = 'title';
   let phaseStart = performance.now();
   let busy = false;
+  let stare;
   const displayed = [...game.pits];
   const layer = $('pit-layer');
   const counts = PITS.map((_, i) => {
-    const element = document.createElement(ROWS[PLAYER].includes(i) ? 'button' : 'div');
+    const element = document.createElement(STORES.includes(i) ? 'div' : 'button');
     element.className = 'pit-count';
     element.classList.toggle('store', STORES.includes(i));
     element.classList.toggle('granny-side', ROWS[GRANNY].includes(i) || i === STORES[GRANNY]);
@@ -108,7 +113,10 @@ async function launch() {
     layer.append(element);
     if (element instanceof HTMLButtonElement) {
       element.type = 'button';
-      element.addEventListener('click', () => void selectPit(i));
+      element.addEventListener('click', () => {
+        if (phase === 'burn') void selectBurn(i);
+        else void selectPit(i);
+      });
     } else {
       element.setAttribute('role', 'img');
     }
@@ -120,6 +128,22 @@ async function launch() {
     camera.fov = pose.fov ?? DEFAULT_FOV;
     camera.upVector.set(Math.sin(pose.roll), Math.cos(pose.roll), 0);
     camera.setTarget(Vector3.FromArray(pose.target));
+  }
+
+  function poseStare(elapsed) {
+    const lunge = reducedMotion ? 1 : ease(Math.max(0, Math.min(1, (elapsed - 0.16) / 0.27)));
+    const distance = 1.76 * lunge;
+    // Clear the table early in the lunge so the close-up reads as a jump.
+    const lift = 0.42 * ease(Math.min(1, lunge / 0.55)) + 0.045 * Math.sin(Math.PI * lunge);
+    grannyRoot.position.set(stare.origin.x, stare.origin.y + lift, stare.origin.z + distance);
+    const { x, y, z } = stare.eyes;
+    view({
+      position: [x, y + lift + 0.025 + 0.14 * (1 - lunge), z + 2.10],
+      target: [x, y + lift - 0.040, z + distance],
+      roll: 0,
+      fov: 0.66,
+    });
+    return lunge;
   }
 
   function overheadPose() {
@@ -144,16 +168,22 @@ async function launch() {
     }
   }
 
-  function showCount(pit, count) {
-    displayed[pit] = count;
-    const { element, label } = counts[pit];
-    label.textContent = count;
+  function pitName(pit) {
     const column = ROWS[PLAYER].indexOf(pit);
-    const name = column >= 0 ? 'Your pit ' + (column + 1)
+    return column >= 0 ? 'Your pit ' + (column + 1)
       : pit === STORES[PLAYER] ? 'Your store'
       : pit === STORES[GRANNY] ? 'Granny’s store'
       : 'Granny’s pit ' + (ROWS[GRANNY].indexOf(pit) + 1);
-    element.setAttribute('aria-label', name + ', ' + count + (count === 1 ? ' seed' : ' seeds'));
+  }
+
+  function showCount(pit, count) {
+    displayed[pit] = count;
+    const { element, label } = counts[pit];
+    const burned = game.burned.includes(pit);
+    label.textContent = burned ? '×' : count;
+    element.classList.toggle('burned', burned);
+    const detail = burned ? 'burned' : count + (count === 1 ? ' seed' : ' seeds');
+    element.setAttribute('aria-label', pitName(pit) + ', ' + detail);
     $('player-score').textContent = displayed[STORES[PLAYER]];
     $('granny-score').textContent = displayed[STORES[GRANNY]];
   }
@@ -167,7 +197,14 @@ async function launch() {
 
   function updatePitButtons() {
     const legal = phase === 'game' && !busy && game.turn === PLAYER ? legalPits(game) : [];
-    for (const pit of ROWS[PLAYER]) counts[pit].element.disabled = !legal.includes(pit);
+    const canBurn = phase === 'burn' ? burnablePits(game) : [];
+    for (const pit of ROWS.flat()) {
+      const { element } = counts[pit];
+      const burnable = canBurn.includes(pit);
+      element.disabled = !legal.includes(pit) && !burnable;
+      element.classList.toggle('burnable', burnable);
+      if (burnable) element.setAttribute('aria-label', 'Burn ' + pitName(pit));
+    }
   }
 
   function status(title, hint) {
@@ -181,28 +218,70 @@ async function launch() {
   }
 
   function enterMatch() {
-    game = newGame();
+    game = newGame(game.burned);
     board.reset(game.pits);
+    board.setBurned(game.burned);
     game.pits.forEach((count, pit) => showCount(pit, count));
     mark();
     busy = false;
     phase = 'game';
     match.hidden = false;
-    $('result').hidden = true;
+    result.hidden = true;
+    $('round-label').textContent = 'Round ' + (game.burned.length + 1);
     status('Your turn', PIT_CHOICE_HINT);
     updatePitButtons();
     layOutPits();
   }
 
   function endMatch() {
+    if (game.outcome === 'win') {
+      phase = 'burn';
+      status('You win', 'Choose a small pit on either side to burn.');
+    } else if (game.outcome === 'draw') {
+      phase = 'draw';
+      status('A draw', 'Replay with the same pits.');
+      showResult('A draw', 'Replay round');
+    } else {
+      phase = 'loss-stare';
+      phaseStart = performance.now();
+      match.hidden = true;
+      stare = {
+        origin: grannyRoot.position.clone(),
+        eyes: Vector3.TransformCoordinates(new Vector3(0, 0.111, 0.0915), grannyHead.computeWorldMatrix(true)),
+      };
+    }
     updatePitButtons();
-    const title = { win: 'You win', loss: 'Granny wins', draw: 'A draw' }[game.outcome];
+    if (phase === 'burn') counts[burnablePits(game)[0]].element.focus({ preventScroll: true });
+  }
+
+  function showResult(title, button) {
     const [playerScore, grannyScore] = STORES.map((pit) => game.pits[pit]);
-    status(title, 'All ' + (playerScore + grannyScore) + ' seeds have been scored.');
     $('result-title').textContent = title;
     $('result-score').textContent = 'You ' + playerScore + ' · Granny ' + grannyScore;
-    $('result').hidden = false;
-    again.focus();
+    result.classList.toggle('game-over', phase === 'game-over');
+    again.textContent = button;
+    result.hidden = false;
+    again.focus({ preventScroll: true });
+  }
+
+  async function selectBurn(pit) {
+    if (phase !== 'burn' || !burnablePits(game).includes(pit)) return;
+    const { burned, complete } = burnPit(game, pit);
+    phase = 'burning';
+    game = { ...game, burned };
+    updatePitButtons();
+    board.setBurned(burned);
+    showCount(pit, 0);
+    mark(pit);
+    status('Pit burned', complete ? 'A row has no playable pits left.' : 'Both sides will skip this pit.');
+    await wait(850);
+    if (complete) {
+      phase = 'victory';
+      mark();
+      showResult('You survived', 'Start a new run');
+    } else {
+      enterMatch();
+    }
   }
 
   async function animateTransfer(step, mover, captured) {
@@ -274,7 +353,7 @@ async function launch() {
     let grannyBonus = false;
     while (game.turn === GRANNY && !game.outcome) {
       status('Granny is thinking', grannyBonus ? 'She earned another turn.' : 'She’s choosing a pit.');
-      mark(...ROWS[GRANNY], STORES[GRANNY]);
+      mark(...ROWS[GRANNY].filter((smallPit) => !game.burned.includes(smallPit)), STORES[GRANNY]);
       await wait(1100);
       grannyBonus = (await animateMove(chooseGrannyPit(game))).bonus;
     }
@@ -298,7 +377,10 @@ async function launch() {
     phase = 'sit';
     phaseStart = performance.now();
   });
-  again.addEventListener('click', enterMatch);
+  again.addEventListener('click', () => {
+    if (phase === 'draw') enterMatch();
+    else if (phase === 'game-over' || phase === 'victory') window.location.reload();
+  });
   window.addEventListener('keydown', (event) => {
     if (event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
     const pit = ROWS[PLAYER][Number(event.key) - 1];
@@ -315,6 +397,7 @@ async function launch() {
     const now = performance.now();
     const elapsed = (now - phaseStart) / 1000;
     let overhead = 0;
+    let stareLight = 0;
     let needsLayout = false;
     if (phase === 'title') {
       view(WAITING_POSE);
@@ -337,14 +420,20 @@ async function launch() {
         view(blendPose(SEATED_POSE, overheadPose(), overhead));
       }
       if (time >= OVERHEAD_START + OVERHEAD_DURATION) needsLayout = true;
-    } else if (phase === 'game') {
+    } else if (phase === 'loss-stare' || phase === 'game-over') {
+      stareLight = poseStare(elapsed);
+      if (phase === 'loss-stare' && elapsed >= LOSS_DURATION) {
+        phase = 'game-over';
+        showResult('Game over', 'Start a new run');
+      }
+    } else if (!match.hidden) {
       overhead = 1;
       view(overheadPose());
     }
-    room.update(now / 1000, overhead);
+    room.update(now / 1000, overhead, stareLight);
     scene.render();
     if (needsLayout) enterMatch();
-    if (phase === 'game' && (previousWidth !== canvas.clientWidth || previousHeight !== canvas.clientHeight)) {
+    if (!match.hidden && (previousWidth !== canvas.clientWidth || previousHeight !== canvas.clientHeight)) {
       layOutPits();
       previousWidth = canvas.clientWidth;
       previousHeight = canvas.clientHeight;

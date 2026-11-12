@@ -22,7 +22,10 @@
     <section id="match" aria-label="Congklak" hidden>
       <header class="scoreboard">
         <div class="score player"><span>You</span><strong id="player-score">0</strong></div>
-        <h2>Congklak</h2>
+        <div class="round-heading">
+          <h2>Congklak</h2>
+          <p id="round-label">Round 1</p>
+        </div>
         <div class="score granny"><span>Granny</span><strong id="granny-score">0</strong></div>
       </header>
       <div id="pit-layer" class="pit-layer" aria-label="Congklak pits"></div>
@@ -36,7 +39,7 @@
       <div class="result-card">
         <h2 id="result-title"></h2>
         <p id="result-score"></p>
-        <button id="again" class="action" type="button">Play again</button>
+        <button id="again" class="action" type="button">Start a new run</button>
       </div>
     </section>
     <p id="error" class="error" role="alert" hidden></p>
