@@ -19,7 +19,7 @@ export class SpectraSession {
     this.state = {
       phase: 'off', stream: null, validationCode: null, devices: [],
       nativeAvailable: false, desktop: false, hasKey: false, needsKey: false,
-      hint: 'Enable your camera to check the signals.',
+      hint: 'Enable your camera to check facial signals.',
     };
   }
 
@@ -164,7 +164,7 @@ export class SpectraSession {
     };
     this.#failSignals = fail;
     this.#lastFeedbackAt = this.now();
-    Object.assign(this.state, { phase: 'starting', hint: 'Connecting SmartSpectra. Rates need time to warm up.' });
+    Object.assign(this.state, { phase: 'starting', hint: 'Starting facial analysis. Keep your face visible and well lit.' });
     this.emit();
     try {
       const { SmartSpectraSDK, requestedMetrics, decodeMetrics } = await this.loadSdk();
@@ -190,6 +190,9 @@ export class SpectraSession {
         if (!current()) return;
         this.#lastFeedbackAt = this.now();
         if (this.readings.startedAt === null) this.readings.start();
+        if (code === 1 || code === 2) this.readings.invalidateFace();
+        // Chest framing is irrelevant to the requested facial metrics.
+        if (code === 7) { code = 0; hint = ''; }
         const phase = code === 0 ? 'measuring' : 'adjust';
         const guidance = validationHint(code, hint).split(this.#key).join('[key]');
         if (phase !== this.state.phase || code !== this.state.validationCode || guidance !== this.state.hint) {

@@ -1,15 +1,15 @@
+import { estimateCameraFacing, FacingDirection } from './face-direction.js';
+
 export const SIGNALS = [
-  { id: 'pulse', label: 'Pulse', group: 'cardio', field: 'pulseRate', unit: 'bpm', warmup: 12, confidence: 40 },
-  { id: 'breathing', label: 'Breathing', group: 'breathing', field: 'rate', unit: 'br/min', warmup: 30, confidence: 45 },
-  { id: 'hrv', label: 'HRV · RMSSD', group: 'cardio', field: 'hrv', valueField: 'rmssd', unit: 'ms', warmup: 60, confidence: 50 },
-  { id: 'blinking', label: 'Blink', group: 'face', field: 'blinking', kind: 'detection', warmup: 0 },
-  { id: 'talking', label: 'Talking', group: 'face', field: 'talking', kind: 'detection', warmup: 0 },
-  { id: 'expression', label: 'Expression', group: 'face', field: 'expression', kind: 'expression', warmup: 0 },
-  { id: 'eda', label: 'EDA proxy · unitless', group: 'eda', field: 'trace', kind: 'trace', warmup: 35 },
+  { id: 'facing', label: 'Facing camera', field: 'landmarks', kind: 'landmarks' },
+  { id: 'blinking', label: 'Eye blink', field: 'blinking', kind: 'detection' },
+  { id: 'talking', label: 'Talking', field: 'talking', kind: 'detection' },
+  { id: 'expression', label: 'Expression', field: 'expression', kind: 'expression' },
 ];
 
 const EXPRESSIONS = ['Unspecified', 'Angry', 'Contempt', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise'];
-const FRESH_MS = 5000;
+const FRESH_MS = 1500;
+const BLINK_HOLD_MS = 350;
 const asNumber = (value) => typeof value === 'number' ? value : Number(value?.toString?.());
 
 function timestamp(sample) {
@@ -28,6 +28,15 @@ export class SignalReadings {
   clear() {
     this.samples = new Map();
     this.startedAt = null;
+    this.direction = new FacingDirection();
+    this.blinkUntil = 0;
+    this.faceEpochUs = 0;
+  }
+
+  invalidateFace() {
+    this.samples.clear();
+    this.direction.clear();
+    this.blinkUntil = 0;
   }
 
   start() {
@@ -38,18 +47,31 @@ export class SignalReadings {
   ingest(metrics) {
     const now = this.now();
     for (const signal of SIGNALS) {
-      const samples = metrics?.[signal.group]?.[signal.field];
+      const samples = metrics?.face?.[signal.field];
       if (!Array.isArray(samples)) continue;
       let latest;
       let latestUs = this.samples.get(signal.id)?.timestampUs ?? 0;
       for (const sample of samples) {
         const sampleUs = timestamp(sample);
-        if (sampleUs !== null && sampleUs > latestUs && sampleUs <= now * 1000 + 2_000_000) {
+        if (sampleUs !== null && sampleUs >= this.faceEpochUs && sampleUs > latestUs && sampleUs <= now * 1000 + 250_000) {
           latest = sample;
           latestUs = sampleUs;
         }
+        if (signal.id === 'blinking' && sampleUs !== null && sampleUs >= this.faceEpochUs
+          && sampleUs <= now * 1000 && now - sampleUs / 1000 <= BLINK_HOLD_MS
+          && sample.stable === true && sample.detected === true) {
+          this.blinkUntil = Math.max(this.blinkUntil, sampleUs / 1000 + BLINK_HOLD_MS);
+        }
       }
-      if (latest) this.samples.set(signal.id, { sample: latest, timestampUs: latestUs, receivedAt: now });
+      if (!latest) continue;
+      if (signal.id === 'facing') {
+        if (latest.reset === true) {
+          this.invalidateFace();
+          this.faceEpochUs = latestUs;
+        }
+        this.direction.update(latest.stable === true ? estimateCameraFacing(latest.value) : null, latestUs / 1000, latest.reset === true);
+      }
+      this.samples.set(signal.id, { sample: latest, timestampUs: latestUs, receivedAt: now });
     }
   }
 
@@ -59,26 +81,28 @@ export class SignalReadings {
     return SIGNALS.map((signal) => {
       const result = { id: signal.id, value: '—', detail: 'Not connected', quality: 'waiting' };
       if (!active || this.startedAt === null) return result;
-      if (validationCode !== null && validationCode !== 0 && (validationCode !== 7 || signal.id === 'breathing')) {
+      if (validationCode !== null && ![0, 3, 7, 17].includes(validationCode)) {
         return { ...result, detail: 'Adjust camera' };
       }
-      if (elapsed < signal.warmup) {
-        return { ...result, detail: 'Warming up · ' + Math.ceil(signal.warmup - elapsed) + 's' };
-      }
       const reading = this.samples.get(signal.id);
-      if (!reading) return { ...result, detail: elapsed < signal.warmup + 15 ? 'Waiting for signal' : 'Not available' };
+      if (!reading) return { ...result, detail: elapsed < 15 ? 'Waiting for signal' : 'Not available' };
       if (now - reading.receivedAt > FRESH_MS || now - reading.timestampUs / 1000 > FRESH_MS) {
         return { ...result, detail: 'Signal lost', quality: 'stale' };
       }
       const { sample } = reading;
-      const confidence = sample.confidence;
-      if (signal.confidence !== undefined && (!Number.isFinite(confidence) || confidence < signal.confidence || confidence > 100)) {
-        return { ...result, detail: Number.isFinite(confidence) && confidence >= 0 && confidence <= 100 ? 'Low confidence · ' + Math.round(confidence) + '%' : 'Waiting for confidence' };
-      }
       if (sample.stable !== true) return { ...result, detail: 'Acquiring signal' };
+      if (signal.kind === 'landmarks') {
+        if (this.direction.value === null) return { ...result, detail: 'Landmarks unavailable' };
+        return {
+          ...result,
+          value: validationCode !== 17 && this.direction.value ? 'Toward' : 'Away',
+          detail: 'Rough head direction', quality: 'live',
+        };
+      }
       if (signal.kind === 'detection') {
         if (typeof sample.detected !== 'boolean') return { ...result, detail: 'Not available' };
-        return { ...result, value: sample.detected ? 'Detected' : 'No', detail: 'Live', quality: 'live' };
+        const detected = signal.id === 'blinking' ? now < this.blinkUntil : sample.detected;
+        return { ...result, value: detected ? 'Detected' : 'No', detail: signal.id === 'blinking' && detected ? 'Recent blink' : 'Live', quality: 'live' };
       }
       if (signal.kind === 'expression') {
         const scores = Array.isArray(sample.scores) ? sample.scores : [];
@@ -88,27 +112,20 @@ export class SignalReadings {
           ? { ...result, value: EXPRESSIONS[best.type], detail: Math.round(best.confidence) + '% confidence', quality: 'live' }
           : { ...result, detail: 'Not available' };
       }
-      const value = sample[signal.valueField ?? 'value'];
-      if (!Number.isFinite(value) || (signal.kind !== 'trace' && value <= 0)) return { ...result, detail: 'Not available' };
-      return {
-        ...result,
-        value: signal.kind === 'trace' ? Number(value.toPrecision(3)).toString() : Math.round(value) + ' ' + signal.unit,
-        detail: signal.confidence === undefined ? 'Live proxy signal' : Math.round(confidence) + '% confidence',
-        quality: 'live',
-      };
+      return result;
     });
   }
 }
 
 const VALIDATION_HINTS = {
-  0: 'Keep still in even front lighting. Include your upper chest for breathing.',
+  0: 'Keep one well-lit face in view. Face the camera to check direction.',
   1: 'No face found. Face the camera in good lighting.',
   2: 'More than one face found. Keep only yourself in view.',
   3: 'Move your face toward the center of the camera.',
   4: 'Adjust your distance from the camera.',
   5: 'It is too dark. Add an even light in front of you.',
   6: 'It is too bright. Reduce glare on your face.',
-  7: 'Move back slightly so your upper chest is visible for breathing.',
+  7: 'Keep one well-lit face in view. Face the camera to check direction.',
   10: 'The camera is adjusting. Hold still for a moment.',
   11: 'Camera frame rate is low. Close other camera apps or reduce graphics load.',
   12: 'Too much movement. Keep your head and camera still.',
@@ -120,6 +137,7 @@ const VALIDATION_HINTS = {
 };
 
 export function validationHint(code, hint) {
+  if (code === 7) return VALIDATION_HINTS[0];
   return typeof hint === 'string' && hint.trim() ? hint.trim().slice(0, 300) : VALIDATION_HINTS[code] ?? 'Adjust your position and lighting until the camera has a clear view.';
 }
 

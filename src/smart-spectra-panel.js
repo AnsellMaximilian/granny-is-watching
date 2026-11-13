@@ -14,8 +14,7 @@ async function loadSdk() {
     SmartSpectraSDK: sdk.SmartSpectraSDK,
     decodeMetrics: messages.decodeMetrics,
     requestedMetrics: [
-      MetricType.PULSE_RATE, MetricType.BREATHING_RATE, MetricType.HRV,
-      MetricType.BLINKING, MetricType.TALKING, MetricType.EXPRESSIONS, MetricType.EDA_TRACE,
+      MetricType.FACE_LANDMARKS, MetricType.BLINKING, MetricType.TALKING, MetricType.EXPRESSIONS,
     ],
   };
 }
@@ -30,7 +29,7 @@ export function mountSmartSpectra() {
   const fields = new Map();
   let promptedForKey = false;
 
-  for (const [index, signal] of SIGNALS.entries()) {
+  for (const signal of SIGNALS) {
     const container = document.createElement('div');
     container.className = 'spectra-signal';
     const label = document.createElement('dt');
@@ -40,7 +39,8 @@ export function mountSmartSpectra() {
     const detail = document.createElement('small');
     reading.append(value, detail);
     container.append(label, reading);
-    $(index < 2 ? 'primary' : 'secondary').append(container);
+    reading.id = 'spectra-reading-' + signal.id;
+    $('primary').append(container);
     fields.set(signal.id, { reading, value, detail });
   }
 
@@ -130,7 +130,7 @@ export function mountSmartSpectra() {
   });
   const deviceChange = () => void session.refreshDevices();
   navigator.mediaDevices?.addEventListener('devicechange', deviceChange);
-  const timer = setInterval(renderReadings, 250);
+  const timer = setInterval(renderReadings, 100);
   window.addEventListener('pagehide', () => {
     clearInterval(timer);
     navigator.mediaDevices?.removeEventListener('devicechange', deviceChange);
