@@ -50,6 +50,7 @@
 | End of one game | After a move resolves with either row empty |
 | Winner | Player with more seeds in their store after the remaining seeds are collected |
 | Progression | Win to burn one small pit on either side. Draw to replay the same board. Lose and the run ends. |
+| Optional facial hurdles | A delayed choice can trigger a smile demand. Debug-triggered upside-down Granny can steal one occupied player pit into her store. |
 
 ## 2. What Congklak is
 
@@ -139,7 +140,7 @@ On your turn, choose **one unburned small pit on your own side** containing at l
 
 Click an occupied pit on the near row or press **1–6** for pits **A1–A6** from left to right. Granny picks a legal pit automatically. Her row and store highlight briefly while she chooses.
 
-Typing in the camera panel's API key field or using its camera selector does not trigger pit shortcuts. The optional **Facial hurdles** mode can interrupt a delayed choice with Granny's smile demand. Satisfying her resumes the same board; failing ends the run. Sowing and scoring rules stay the same. See the [facial encounter rules](core-game.md#granny-wants-a-smile).
+Typing in the camera panel's API key field or using its camera selector does not trigger pit shortcuts. The optional **Facial hurdles** mode can interrupt a delayed choice with Granny's smile demand. Satisfying her resumes the same board; failing ends the run. The debug-triggered upside-down encounter keeps pit selection available and requires looking away. Failing it steals every seed from one random occupied, unburned player pit into Granny's store, at most once per appearance. Choosing a pit dismisses her. Sowing and scoring rules stay the same. See the [facial encounter rules](core-game.md#granny-wants-a-smile) and [look-away rules](core-game.md#do-not-look-at-her).
 
 ### 7.2 Picking up seeds
 
@@ -329,6 +330,10 @@ A's last seed lands in previously empty `A2`, and `B2` is empty as well. The fin
 ### Example 5: Reaching the final score
 
 After B finishes a move, all B small pits are empty. A still has 9 seeds scattered among A's small pits. The game sweeps those **9** remaining seeds into A's store and counts both stores.
+
+### Example 6: The optional look-away penalty
+
+On the opening board, upside-down Granny steals `A1` with 4 seeds. `A1` becomes empty and her store increases from 0 to 4. Every other pit stays unchanged, the player still chooses the next move, and the total stays 48. A stolen pit remains playable and can receive seeds later. It is not burned. If stealing empties the player's entire row, the ordinary sweep and scoring happen immediately.
 
 ## 12. Rules clarifications and unusual cases
 

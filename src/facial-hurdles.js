@@ -1,4 +1,5 @@
 export const HAPPY_RULES = Object.freeze({ chooseMs: 5000, graceMs: 1500, angerMs: 8000, holdMs: 900 });
+export const AWAY_RULES = Object.freeze({ graceMs: 1500, angerMs: 6000 });
 
 // Timing runs only while the game is foregrounded and the current signal is
 // reliable. This state stays independent of DOM text, scene poses and scores.
@@ -15,6 +16,7 @@ export class FacialHurdles {
     this.angerMs = 0;
     this.happyMs = 0;
     this.encounterMs = 0;
+    this.awayPenalized = false;
   }
 
   setEnabled(enabled) {
@@ -22,14 +24,35 @@ export class FacialHurdles {
     this.resetChoice();
   }
 
-  get pressure() { return Math.min(1, this.angerMs / HAPPY_RULES.angerMs); }
+  activateAway(choosing) {
+    if (!this.enabled || !choosing || this.active !== null) return false;
+    this.active = 'away';
+    this.angerMs = 0;
+    this.encounterMs = 0;
+    this.awayPenalized = false;
+    return true;
+  }
+
+  get pressure() { return Math.min(1, this.angerMs / (this.active === 'away' ? AWAY_RULES.angerMs : HAPPY_RULES.angerMs)); }
   get stage() { return Math.min(2, Math.floor(this.pressure * 3)); }
 
-  step(deltaMs, { choosing = false, focused = true, expression = null } = {}) {
-    if (!this.enabled || !focused || !expression || !Number.isInteger(expression.type)
+  step(deltaMs, { choosing = false, focused = true, expression = null, facing = null } = {}) {
+    if (!this.enabled || !focused) return null;
+    const dt = Math.max(0, Math.min(100, deltaMs));
+    if (this.active === 'away') {
+      if (!choosing || this.awayPenalized || typeof facing !== 'boolean') return null;
+      this.encounterMs += dt;
+      if (!facing) this.angerMs = Math.max(0, this.angerMs - dt * 2);
+      else if (this.encounterMs > AWAY_RULES.graceMs) this.angerMs += dt;
+      if (this.angerMs >= AWAY_RULES.angerMs) {
+        this.awayPenalized = true;
+        return 'away-penalty';
+      }
+      return null;
+    }
+    if (!expression || !Number.isInteger(expression.type)
       || expression.type < 1 || expression.type > 8 || !Number.isFinite(expression.confidence)
       || expression.confidence < 45 || expression.confidence > 100) return null;
-    const dt = Math.max(0, Math.min(100, deltaMs));
     if (this.active === null) {
       if (!choosing || this.resolved) return null;
       this.choiceMs += dt;

@@ -10,7 +10,7 @@ An optional **Camera & signals** panel sits at the bottom left throughout the ga
 
 In Electron, SmartSpectra requests only facial landmarks, eye blink, talking, and facial expression. All four appear beneath the preview without rate-analysis warm-up countdowns. **Facing camera** estimates **Toward / Away** from the relative positions of the eyes, nose, and chin, with brief smoothing. This estimates head direction; eye movements alone can leave it unchanged. **Eye blink** holds a recent detection for 350 ms so it is visible. **Talking** uses facial analysis without microphone audio. **Expression** shows the highest-scoring SDK classification and its confidence.
 
-Live guidance reports face positioning, lighting, movement, and camera readiness. Missing, unstable, malformed, or stale signals show a dash with a reason. Readings expire after 1.5 seconds without a fresh sample. Losing the face or resetting tracking clears previous detections. Pulse, breathing, HRV, and EDA are not requested. A missing or rejected key can be supplied through **API key**. Signal failures keep the preview available and offer a manual retry; camera failures offer a fresh start.
+Live guidance reports face positioning, lighting, movement, and camera readiness. Missing, unstable, malformed, or stale signals show a dash with a reason. Readings expire after 1.5 seconds without a fresh sample. Losing the face or resetting tracking clears previous detections. Fresh SDK **no face** or **face not forward** feedback also shows **Facing camera: Away**, with its source explained. A camera error remains unknown. Pulse, breathing, HRV, and EDA are not requested. A missing or rejected key can be supplied through **API key**. Signal failures keep the preview available and offer a manual retry; camera failures offer a fresh start.
 
 **Facial hurdles: Off / On** toggles the optional facial gameplay mode. It starts off and can be changed at any time. Enabling it also opens the camera if needed. With it off, facial signals remain a diagnostic preview. The game does not record the webcam, save measurements, capture microphone audio, or request LLM insights. SDK telemetry is disabled. See the [setup instructions](../README.md#camera-and-smartspectra) for the local key and camera requirements.
 
@@ -23,6 +23,16 @@ Hold a stable **Happy** classification with at least 45% confidence for about 0.
 Other expressions do not fail the encounter immediately. After a 1.5-second grace period, a hidden anger value rises toward failure over eight seconds of reliable non-happy tracking. A happy face reduces anger. Granny's lines change over three stages, the camera moves closer, and a quiet synthesized scream grows louder and sharper. At the limit she lunges closer with the existing loss scream and the run ends in **Game over**.
 
 Missing, stale, unstable, low-confidence, or unspecified expression data pauses both anger and smile progress. The prompt explains when tracking is paused. Leaving the game window also pauses the encounter and fades the pressure audio. Switching facial hurdles off returns to the board without changing any seeds.
+
+## Do not look at her
+
+For this milestone, **Debug: Upside-down Granny** manually starts this encounter while facial hurdles are on and the player is choosing a pit. There are no random appearances yet. An isolated copy of Granny's head slides down from the top, upside down with black eyes and her hair toward the player's side. Her head stays above the near row. The overhead camera and all legal pit controls remain usable. The rulebook is unavailable during her visit, and the smile timer is suspended.
+
+Look away from the webcam while choosing a pit. A fresh **Facing camera: Away** estimate, SDK **face not forward**, or SDK **no face** feedback counts as looking away. Turning just the eyes remains unreliable; turning the head out of view is supported. A disconnected camera, stale feedback, multiple faces, or uncertain landmarks pauses the hurdle instead of counting as either direction.
+
+After a 1.5-second grace period, looking toward her accumulates hidden pressure. Looking away reduces it. A lighter version of the progressive scream builds through three warning stages. Six seconds of accumulated looking-toward time triggers one penalty: Granny takes every seed from one random occupied, unburned player pit and banks them in her store. The transfer is animated and uses a quieter scream. Stores, empty pits, burned pits, and Granny's own pits are never chosen for theft.
+
+She stays until the player chooses a pit, including after a penalty. Each appearance can steal at most once. Choosing dismisses the head and plays the selected move normally. Switching facial hurdles off also dismisses her. If a theft has already started, its transfer finishes. If stealing empties the player's row, the usual remaining-seed sweep and scoring end the round and dismiss her. Burned pits and the next round's starting seed counts are unaffected by theft.
 
 ## Play a round
 

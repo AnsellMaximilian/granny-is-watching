@@ -17,7 +17,7 @@ export class SpectraSession {
     this.now = now;
     this.readings = new SignalReadings(now);
     this.state = {
-      phase: 'off', stream: null, validationCode: null, devices: [],
+      phase: 'off', stream: null, validationCode: null, validationAt: null, devices: [],
       nativeAvailable: false, desktop: false, hasKey: false, needsKey: false,
       hint: 'Enable your camera to check facial signals.',
     };
@@ -44,6 +44,7 @@ export class SpectraSession {
     return {
       healthy: Boolean(active),
       expression: this.readings.gameplayExpression({ active, validationCode: this.state.validationCode }),
+      facing: this.readings.gameplayFacing({ active, validationCode: this.state.validationCode, validationAt: this.state.validationAt }),
     };
   }
 
@@ -56,6 +57,7 @@ export class SpectraSession {
     try { sdk?.destroy(); } catch { /* Camera cleanup still has to run. */ }
     this.readings.clear();
     this.state.validationCode = null;
+    this.state.validationAt = null;
   }
 
   poll() {
@@ -199,6 +201,7 @@ export class SpectraSession {
       sdk.on('validationStatus', (code, _timestampUs, hint) => {
         if (!current()) return;
         this.#lastFeedbackAt = this.now();
+        this.state.validationAt = this.now();
         if (this.readings.startedAt === null) this.readings.start();
         if (code === 1 || code === 2) this.readings.invalidateFace();
         // Chest framing is irrelevant to the requested facial metrics.

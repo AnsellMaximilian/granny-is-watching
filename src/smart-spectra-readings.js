@@ -90,12 +90,25 @@ export class SignalReadings {
       : null;
   }
 
-  snapshot({ active = true, validationCode = null } = {}) {
+  gameplayFacing({ active, validationCode, validationAt = null }) {
+    if (!active) return null;
+    const now = this.now();
+    if ([1, 17].includes(validationCode) && validationAt !== null && now - validationAt <= 1000) return false;
+    const reading = this.samples.get('facing');
+    if (![0, 3, 7, 17].includes(validationCode) || !reading || reading.sample.stable !== true
+      || now - reading.timestampUs / 1000 > 450 || now - reading.receivedAt > 450) return null;
+    return validationCode === 17 ? false : this.direction.value;
+  }
+
+  snapshot({ active = true, validationCode = null, validationAt = null } = {}) {
     const now = this.now();
     const elapsed = this.startedAt === null ? 0 : Math.max(0, (now - this.startedAt) / 1000);
     return SIGNALS.map((signal) => {
       const result = { id: signal.id, value: '—', detail: 'Not connected', quality: 'waiting' };
       if (!active || this.startedAt === null) return result;
+      if (signal.id === 'facing' && [1, 17].includes(validationCode) && validationAt !== null && now - validationAt <= 1000) {
+        return { ...result, value: 'Away', detail: validationCode === 1 ? 'Face out of view' : 'SDK pose feedback', quality: 'live' };
+      }
       if (validationCode !== null && ![0, 3, 7, 17].includes(validationCode)) {
         return { ...result, detail: 'Adjust camera' };
       }

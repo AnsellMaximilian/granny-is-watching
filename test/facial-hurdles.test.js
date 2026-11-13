@@ -80,3 +80,34 @@ test('large frame gaps do not charge a backgrounded player for elapsed wall time
   assert.equal(hurdles.choiceMs, 100);
   assert.equal(hurdles.active, null);
 });
+
+test('upside-down encounter is debug-triggered, keeps waiting while away, and suspends the smile timer', () => {
+  const { hurdles, advance } = fixture();
+  assert.equal(hurdles.activateAway(false), false);
+  assert.equal(hurdles.activateAway(true), true);
+  assert.equal(hurdles.activateAway(true), false);
+  assert.deepEqual(advance(20000, { facing: false }), []);
+  assert.equal(hurdles.active, 'away');
+  assert.equal(hurdles.pressure, 0);
+  hurdles.resetChoice();
+  assert.equal(hurdles.active, null);
+  assert.deepEqual(advance(5000), ['happy-start']);
+});
+
+test('looking toward upside-down Granny has grace and tolerance before a single theft per appearance', () => {
+  const { hurdles, advance } = fixture();
+  hurdles.activateAway(true);
+  advance(1500, { facing: true });
+  assert.equal(hurdles.pressure, 0);
+  advance(1500, { facing: true });
+  const pressure = hurdles.pressure;
+  advance(30000, { facing: null });
+  advance(30000, { facing: true, focused: false });
+  assert.equal(hurdles.pressure, pressure);
+  advance(500, { facing: false });
+  assert.ok(hurdles.pressure < pressure);
+  assert.deepEqual(advance(5500, { facing: true }), ['away-penalty']);
+  assert.equal(hurdles.active, 'away', 'She stays after the penalty until a pit is chosen');
+  assert.equal(hurdles.awayPenalized, true);
+  assert.deepEqual(advance(20000, { facing: true }), []);
+});

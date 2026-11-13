@@ -142,8 +142,8 @@ export function createGameAudio() {
     ignite(x = 0) {
       play('fire-ignite.ogg', 0.65, Math.max(-0.4, Math.min(0.4, x * 0.35)));
     },
-    scream(granny = false) {
-      const source = play(granny ? 'scream-granny.wav' : 'scream-loss.wav', 0.76);
+    scream(granny = false, volume = 0.76) {
+      const source = play(granny ? 'scream-granny.wav' : 'scream-loss.wav', Math.max(0, Math.min(0.76, volume)));
       if (!source) return;
       screamsPlaying += 1;
       duckMusic();

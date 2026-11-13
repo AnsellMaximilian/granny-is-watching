@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { GRANNY, PLAYER, ROWS, STORES, burnablePits, burnPit, chooseGrannyPit, legalPits, newGame, playMove } from '../src/congklak.js';
+import { GRANNY, PLAYER, ROWS, STORES, burnablePits, burnPit, chooseGrannyPit, legalPits, newGame, playMove, stealPlayerPit } from '../src/congklak.js';
 
 const [A1, A2, A3, A4, A5, A6] = ROWS[PLAYER];
 const [B1, B2, B3, B4, B5, B6] = ROWS[GRANNY];
@@ -14,6 +14,38 @@ function position(counts, turn = PLAYER, burned = []) {
     turn,
   };
 }
+
+test('the facial penalty transfers one occupied player pit into Granny’s store and preserves every seed', () => {
+  const before = newGame();
+  const { game, source, seeds, steps } = stealPlayerPit(before, () => 0.5);
+  assert.equal(source, A4);
+  assert.equal(seeds, 4);
+  assert.equal(game.pits[A4], 0);
+  assert.equal(game.pits[B_STORE], 4);
+  assert.equal(game.pits[A_STORE], 0);
+  assert.equal(game.turn, PLAYER);
+  assert.equal(game.outcome, null);
+  assert.equal(game.pits.reduce((a, b) => a + b), 48);
+  assert.equal(before.pits[A4], 4);
+  assert.deepEqual(steps, [{ kind: 'steal', pit: B_STORE, count: 4, emptied: [A4] }]);
+});
+
+test('theft ignores empty and burned pits and applies ordinary end-of-round scoring if it empties the row', () => {
+  const before = position({ [A1]: 3, [A3]: 2, [A_STORE]: 10, [B2]: 5, [B_STORE]: 6 }, PLAYER, [A2]);
+  const first = stealPlayerPit(before, () => 0.999);
+  assert.equal(first.source, A3);
+  assert.equal(first.game.pits[B_STORE], 8);
+  const last = stealPlayerPit(first.game, () => 0);
+  assert.equal(last.source, A1);
+  assert.equal(last.game.pits[B_STORE], 16);
+  assert.equal(last.game.pits[A_STORE], 10);
+  assert.equal(last.game.outcome, 'loss');
+  assert.ok(ROWS.flat().every((pit) => last.game.pits[pit] === 0));
+  assert.equal(last.game.pits.reduce((a, b) => a + b), before.pits.reduce((a, b) => a + b));
+  assert.equal(last.steps.at(-1).kind, 'sweep');
+  assert.throws(() => stealPlayerPit(last.game), RangeError);
+  assert.throws(() => stealPlayerPit({ ...before, turn: GRANNY }), RangeError);
+});
 
 test('A4 from the four-seed opening sows toward the left store and grants a fresh choice', () => {
   const opening = newGame();

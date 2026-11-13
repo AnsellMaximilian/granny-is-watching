@@ -49,6 +49,33 @@ export function burnPit(game, pit) {
   return { burned, ending };
 }
 
+function finishEmptyRows(pits, steps) {
+  if (!ROWS.some((row) => row.every((pit) => pits[pit] === 0))) return null;
+  for (const [owner, row] of ROWS.entries()) {
+    const remaining = row.reduce((total, pit) => total + pits[pit], 0);
+    if (remaining === 0) continue;
+    for (const pit of row) pits[pit] = 0;
+    pits[STORES[owner]] += remaining;
+    steps.push({ kind: 'sweep', pit: STORES[owner], count: pits[STORES[owner]], emptied: row });
+  }
+  const difference = pits[STORES[PLAYER]] - pits[STORES[GRANNY]];
+  return difference === 0 ? 'draw' : difference > 0 ? 'win' : 'loss';
+}
+
+export function stealPlayerPit(game, random = Math.random) {
+  if (game.turn !== PLAYER || game.outcome) throw new RangeError('Granny can steal only while the player is choosing.');
+  const choices = legalPits(game);
+  if (choices.length === 0) throw new RangeError('There is no occupied player pit to steal.');
+  const source = choices[Math.min(choices.length - 1, Math.max(0, Math.floor(random() * choices.length)))];
+  const pits = [...game.pits];
+  const seeds = pits[source];
+  pits[source] = 0;
+  pits[STORES[GRANNY]] += seeds;
+  const steps = [{ kind: 'steal', pit: STORES[GRANNY], count: pits[STORES[GRANNY]], emptied: [source] }];
+  const outcome = finishEmptyRows(pits, steps);
+  return { game: { ...game, pits, outcome }, source, seeds, steps };
+}
+
 export function playMove(game, source) {
   if (!legalPits(game).includes(source)) throw new RangeError('Choose an occupied pit on your side.');
 
@@ -99,18 +126,7 @@ export function playMove(game, source) {
     }
   }
 
-  let outcome = null;
-  if (ROWS.some((row) => row.every((pit) => pits[pit] === 0))) {
-    for (const [owner, row] of ROWS.entries()) {
-      const remaining = row.reduce((total, pit) => total + pits[pit], 0);
-      if (remaining === 0) continue;
-      for (const pit of row) pits[pit] = 0;
-      pits[STORES[owner]] += remaining;
-      steps.push({ kind: 'sweep', pit: STORES[owner], count: pits[STORES[owner]], emptied: row });
-    }
-    const difference = pits[STORES[PLAYER]] - pits[STORES[GRANNY]];
-    outcome = difference === 0 ? 'draw' : difference > 0 ? 'win' : 'loss';
-  }
+  const outcome = finishEmptyRows(pits, steps);
 
   return { game: { ...game, pits, turn: bonus ? side : opponent, outcome }, steps, bonus, captured };
 }

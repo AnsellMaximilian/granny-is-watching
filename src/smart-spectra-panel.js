@@ -28,6 +28,7 @@ export function mountSmartSpectra() {
   const settings = $('settings');
   const fields = new Map();
   let promptedForKey = false;
+  let encounter = null;
 
   for (const signal of SIGNALS) {
     const container = document.createElement('div');
@@ -47,7 +48,8 @@ export function mountSmartSpectra() {
   const session = new SpectraSession({ mediaDevices: navigator.mediaDevices, loadSdk, onChange: render });
   function render() {
     const state = session.state;
-    const { phase, stream, hint } = state;
+    const { phase, stream } = state;
+    let hint = state.hint;
     const active = ['starting', 'measuring', 'adjust'].includes(phase);
     panel.dataset.state = phase;
     if (video.srcObject !== stream) {
@@ -56,11 +58,15 @@ export function mountSmartSpectra() {
     }
     $('preview').hidden = !stream;
     $('readings').hidden = !stream;
-    const status = {
+    let status = {
       off: 'Camera off', opening: 'Opening camera…', preview: 'Camera ready',
       starting: 'Starting signals…', measuring: 'Measuring', adjust: 'Adjust camera',
       'camera-error': 'Camera unavailable', 'signal-error': 'Signals unavailable',
     }[phase];
+    if (encounter === 'away' && ['measuring', 'adjust'].includes(phase)) {
+      status = state.validationCode === 1 ? 'Face out of view' : status;
+      hint = 'Look away from the camera while choosing a pit. Granny leaves after your choice.';
+    }
     // Do not replace aria-live text on every metrics tick or repeat SDK hints.
     if ($('status').textContent !== status) $('status').textContent = status;
     if ($('hint').textContent !== hint) $('hint').textContent = hint;
@@ -92,8 +98,8 @@ export function mountSmartSpectra() {
 
   function renderReadings() {
     session.poll();
-    const { phase, validationCode } = session.state;
-    for (const sample of session.readings.snapshot({ active: ['starting', 'measuring', 'adjust'].includes(phase), validationCode })) {
+    const { phase, validationCode, validationAt } = session.state;
+    for (const sample of session.readings.snapshot({ active: ['starting', 'measuring', 'adjust'].includes(phase), validationCode, validationAt })) {
       const field = fields.get(sample.id);
       field.value.textContent = sample.value;
       field.detail.textContent = sample.detail;
@@ -149,6 +155,7 @@ export function mountSmartSpectra() {
   }
   return {
     gameplaySignals: () => session.gameplaySignals(),
+    setEncounter(value) { encounter = value; render(); },
     async ensureCamera() {
       await ready;
       if (!session.state.stream) await session.startCamera($('camera').value);

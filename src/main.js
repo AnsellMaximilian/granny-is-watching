@@ -10,12 +10,13 @@ import { GLTFFileLoader } from '@babylonjs/loaders/glTF/2.0/glTFLoader';
 
 import { buildRoom } from './room.js';
 import { BOARD_TOP, PITS, buildBoard } from './board.js';
-import { PLAYER, GRANNY, ROWS, STORES, burnablePits, burnPit, chooseGrannyPit, legalPits, newGame, playMove } from './congklak.js';
+import { PLAYER, GRANNY, ROWS, STORES, burnablePits, burnPit, chooseGrannyPit, legalPits, newGame, playMove, stealPlayerPit } from './congklak.js';
 import { BURN_DIALOGUE } from './burn-dialogue.js';
 import { buildRulebook } from './rulebook.js';
 import { createGameAudio } from './audio.js';
 import { mountSmartSpectra } from './smart-spectra-panel.js';
 import { FacialHurdles } from './facial-hurdles.js';
+import { createUpsideDownGranny } from './upside-down-granny.js';
 
 const spectra = mountSmartSpectra();
 
@@ -116,6 +117,7 @@ async function launch() {
   const introFps = introClip.targetedAnimations[0].animation.framePerSecond;
   introClip.start(false);
   introClip.pause();
+  const upsideDown = createUpsideDownGranny(scene, camera, grannyHead, reducedMotion);
 
   function poseGranny(time) {
     introClip.goToFrame(Math.min(introClip.to, introClip.from + time * introFps));
@@ -134,6 +136,7 @@ async function launch() {
   let facialShot;
   const facialEncounter = $('facial-encounter');
   const facialMode = $('facial-mode');
+  const debugAway = $('debug-away');
   const displayed = [...game.pits];
   const layer = $('pit-layer');
   const counts = PITS.map((_, i) => {
@@ -223,11 +226,23 @@ async function launch() {
       && !document.activeElement?.closest?.('#spectra-key-form, #spectra-camera-picker');
     const event = hurdles.step(deltaMs, {
       choosing: phase === 'game' && !busy && game.turn === PLAYER && !game.outcome,
-      focused, expression: signals.expression,
+      focused, expression: signals.expression, facing: signals.facing,
     });
     if (event === 'happy-start') beginHappyEncounter();
     if (event === 'happy-pass') returnFromHappy();
     if (event === 'happy-fail') startStare({ close: true, reason: 'Granny did not believe your smile.' });
+    if (event === 'away-penalty') void applyAwayPenalty();
+    if (hurdles.active === 'away') {
+      if (!busy) {
+        const hint = !focused ? 'Paused while you are away from the game.'
+          : !signals.healthy || signals.facing === null ? 'Tracking paused. Reconnect the camera, or switch facial hurdles off.'
+          : hurdles.awayPenalized ? 'She has taken her due. Choose a pit to send her away.'
+          : 'Look away from the camera while choosing an occupied pit on your side.';
+        status(hurdles.awayPenalized ? 'Granny has taken her harvest' : ['Do not look at her', 'She can see you looking', 'Look away, child'][hurdles.stage], hint);
+      }
+      if (focused && signals.healthy && signals.facing !== null && !hurdles.awayPenalized && !busy) sound.threat(hurdles.pressure, true);
+      else sound.stopThreat();
+    }
     if (phase === 'facial-happy') {
       const lines = ['“Are you having fun, child?”', '“Is that all the joy you have for Granny?”', '“Smile. For Granny.”'];
       const line = lines[hurdles.stage];
@@ -249,8 +264,20 @@ async function launch() {
     if (enabled) void spectra.ensureCamera();
     else {
       sound.stopThreat();
+      upsideDown.dismiss(performance.now());
+      match.classList.remove('away-encounter');
+      spectra.setEncounter(null);
       if (phase === 'facial-happy') returnFromHappy();
+      else if (phase === 'game' && !busy) status('Your turn', PIT_CHOICE_HINT);
     }
+    updatePitButtons();
+  });
+  debugAway.addEventListener('click', () => {
+    if (!hurdles.activateAway(phase === 'game' && !busy && game.turn === PLAYER && !game.outcome)) return;
+    upsideDown.show(performance.now());
+    match.classList.add('away-encounter');
+    spectra.setEncounter('away');
+    updatePitButtons();
   });
   document.addEventListener('visibilitychange', () => { if (document.hidden) sound.stopThreat(); });
   window.addEventListener('blur', () => sound.stopThreat());
@@ -348,7 +375,8 @@ async function launch() {
       element.classList.toggle('burnable', burnable);
       if (burnable) element.setAttribute('aria-label', 'Burn ' + pitName(pit));
     }
-    rulebookButton.disabled = phase !== 'burn' && (phase !== 'game' || busy || game.turn !== PLAYER || game.outcome !== null);
+    rulebookButton.disabled = hurdles.active === 'away' || (phase !== 'burn' && (phase !== 'game' || busy || game.turn !== PLAYER || game.outcome !== null));
+    debugAway.hidden = !hurdles.enabled || phase !== 'game' || busy || game.turn !== PLAYER || Boolean(game.outcome) || hurdles.active !== null;
   }
 
   function updateReader() {
@@ -412,6 +440,9 @@ async function launch() {
   }
 
   function enterMatch() {
+    upsideDown.hide();
+    match.classList.remove('away-encounter');
+    spectra.setEncounter(null);
     hurdles.resetChoice();
     tableShot = undefined;
     game = newGame(game.burned, game.escapePattern);
@@ -430,6 +461,9 @@ async function launch() {
   }
 
   function endMatch() {
+    upsideDown.hide();
+    match.classList.remove('away-encounter');
+    spectra.setEncounter(null);
     hurdles.resetChoice();
     if (game.outcome === 'win') {
       void offerBurn();
@@ -444,6 +478,9 @@ async function launch() {
   }
 
   function startStare({ close = false, reason = '' } = {}) {
+    upsideDown.hide();
+    match.classList.remove('away-encounter');
+    spectra.setEncounter(null);
     sound.stopThreat();
     facialEncounter.hidden = true;
     facialShot = undefined;
@@ -618,6 +655,10 @@ async function launch() {
   async function selectPit(pit) {
     if (phase !== 'game' || busy || game.turn !== PLAYER || !legalPits(game).includes(pit)) return;
     busy = true;
+    upsideDown.dismiss(performance.now());
+    match.classList.remove('away-encounter');
+    sound.stopThreat();
+    spectra.setEncounter(null);
     hurdles.resetChoice();
     updatePitButtons();
     const move = await animateMove(pit);
@@ -635,6 +676,28 @@ async function launch() {
       status(move.bonus ? 'Play again' : 'Your turn', PIT_CHOICE_HINT);
       updatePitButtons();
     }
+  }
+
+  async function applyAwayPenalty() {
+    if (phase !== 'game' || busy || game.turn !== PLAYER || game.outcome) return;
+    const theft = stealPlayerPit(game);
+    busy = true;
+    updatePitButtons();
+    sound.stopThreat();
+    sound.scream(false, 0.19);
+    status('Granny steals ' + theft.seeds + ' seeds', 'One of your occupied pits goes into her store.');
+    mark(theft.source, STORES[GRANNY]);
+    showCount(theft.source, 0);
+    showHand(theft.seeds, 'in transit');
+    await board.transfer([theft.source], STORES[GRANNY], 1100);
+    showCount(STORES[GRANNY], theft.steps[0].count);
+    showHand();
+    for (const step of theft.steps.slice(1)) await animateTransfer(step, GRANNY, 0);
+    game = theft.game;
+    mark();
+    busy = false;
+    if (game.outcome) endMatch();
+    else updatePitButtons();
   }
 
   wake.addEventListener('click', () => {
@@ -746,6 +809,7 @@ async function launch() {
       view(overheadPose());
     }
     room.update(now / 1000, overhead, stareLight);
+    upsideDown.update(now, hurdles.active === 'away' ? hurdles.pressure : 0);
     scene.render();
     if (needsLayout) enterMatch();
     if (!match.hidden && (previousWidth !== canvas.clientWidth || previousHeight !== canvas.clientHeight)) {

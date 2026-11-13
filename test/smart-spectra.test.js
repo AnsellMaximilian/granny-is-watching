@@ -182,6 +182,24 @@ test('gameplay expressions require fresh, stable, confident classifications even
   }
 });
 
+test('gameplay away uses fresh turned-head or no-face feedback and never mistakes a disconnected camera for looking away', () => {
+  const { model, advance, sample, get } = readingsFixture();
+  const now = sample().timestamp / 1000;
+  const options = { active: true, validationCode: 1, validationAt: now };
+  assert.equal(model.gameplayFacing(options), false);
+  assert.equal(get('facing', options).value, 'Away');
+  assert.equal(get('facing', options).detail, 'Face out of view');
+  assert.equal(model.gameplayFacing({ ...options, active: false }), null);
+  assert.equal(model.gameplayFacing({ ...options, validationCode: 2 }), null);
+  assert.equal(model.gameplayFacing({ ...options, validationCode: 17 }), false);
+  advance(1100);
+  assert.equal(model.gameplayFacing(options), null);
+  model.ingest({ face: { landmarks: [sample({ value: facePoints() })] } });
+  assert.equal(model.gameplayFacing({ active: true, validationCode: 0 }), true);
+  advance(500);
+  assert.equal(model.gameplayFacing({ active: true, validationCode: 0 }), null);
+});
+
 function deferred() {
   let resolve;
   let reject;
