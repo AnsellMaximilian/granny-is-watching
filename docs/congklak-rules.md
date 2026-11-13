@@ -139,7 +139,7 @@ On your turn, choose **one unburned small pit on your own side** containing at l
 
 Click an occupied pit on the near row or press **1–6** for pits **A1–A6** from left to right. Granny picks a legal pit automatically. Her row and store highlight briefly while she chooses.
 
-Typing in the camera panel's API key field or using its camera selector does not trigger pit shortcuts. Camera signals do not change the rules, scoring, or Granny's moves in this milestone.
+Typing in the camera panel's API key field or using its camera selector does not trigger pit shortcuts. The optional **Facial hurdles** mode can interrupt a delayed choice with Granny's smile demand. Satisfying her resumes the same board; failing ends the run. Sowing and scoring rules stay the same. See the [facial encounter rules](core-game.md#granny-wants-a-smile).
 
 ### 7.2 Picking up seeds
 

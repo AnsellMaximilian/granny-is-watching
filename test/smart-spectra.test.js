@@ -161,6 +161,27 @@ test('camera and SDK errors give actionable messages without displaying native s
   assert.equal(validationHint(99, '  Please face forward.  '), 'Please face forward.');
 });
 
+test('gameplay expressions require fresh, stable, confident classifications even while debug values remain visible', () => {
+  const { model, advance, sample } = readingsFixture();
+  const options = { active: true, validationCode: 0 };
+  model.ingest({ face: { expression: [sample({ scores: [{ type: 5, confidence: 83 }] })] } });
+  assert.equal(model.gameplayExpression(options).type, 5);
+  assert.equal(model.gameplayExpression({ ...options, active: false }), null);
+  assert.equal(model.gameplayExpression({ ...options, validationCode: 1 }), null);
+  advance(500);
+  assert.equal(model.gameplayExpression(options), null);
+  assert.equal(model.snapshot().find((reading) => reading.id === 'expression').value, 'Happy');
+  for (const fields of [
+    { scores: [{ type: 5, confidence: 20 }] },
+    { scores: [{ type: 0, confidence: 90 }, { type: 5, confidence: 10 }] },
+    { scores: [{ type: 5, confidence: 90 }], stable: false },
+  ]) {
+    advance(1);
+    model.ingest({ face: { expression: [sample(fields)] } });
+    assert.equal(model.gameplayExpression(options), null);
+  }
+});
+
 function deferred() {
   let resolve;
   let reject;

@@ -138,9 +138,20 @@ export function mountSmartSpectra() {
   }, { once: true });
 
   // Ordinary browser development remains playable, with preview-only support.
+  let ready;
   if (window.grannySpectra?.getConfig) {
-    window.grannySpectra.getConfig()
+    ready = window.grannySpectra.getConfig()
       .then((config) => session.configure({ ...config, desktop: true }))
       .catch(() => session.configure({ desktop: true, nativeAvailable: false }));
-  } else session.configure({ desktop: false, nativeAvailable: false });
+  } else {
+    session.configure({ desktop: false, nativeAvailable: false });
+    ready = Promise.resolve();
+  }
+  return {
+    gameplaySignals: () => session.gameplaySignals(),
+    async ensureCamera() {
+      await ready;
+      if (!session.state.stream) await session.startCamera($('camera').value);
+    },
+  };
 }

@@ -12,7 +12,17 @@ In Electron, SmartSpectra requests only facial landmarks, eye blink, talking, an
 
 Live guidance reports face positioning, lighting, movement, and camera readiness. Missing, unstable, malformed, or stale signals show a dash with a reason. Readings expire after 1.5 seconds without a fresh sample. Losing the face or resetting tracking clears previous detections. Pulse, breathing, HRV, and EDA are not requested. A missing or rejected key can be supplied through **API key**. Signal failures keep the preview available and offer a manual retry; camera failures offer a fresh start.
 
-This milestone only displays signals. They do not influence Granny, congklak, progression, or endings. The game does not record the webcam, save measurements, capture microphone audio, or request LLM insights. SDK telemetry is disabled. See the [setup instructions](../README.md#camera-and-smartspectra) for the local key and camera requirements.
+**Facial hurdles: Off / On** toggles the optional facial gameplay mode. It starts off and can be changed at any time. Enabling it also opens the camera if needed. With it off, facial signals remain a diagnostic preview. The game does not record the webcam, save measurements, capture microphone audio, or request LLM insights. SDK telemetry is disabled. See the [setup instructions](../README.md#camera-and-smartspectra) for the local key and camera requirements.
+
+## Granny wants a smile
+
+With facial hurdles enabled, five seconds spent choosing a pit on the player's turn brings the POV up to Granny. She asks, **“Are you having fun, child?”** Pit selection pauses while she waits for a happy face. This can also happen on a bonus choice. Time spent sowing, on Granny's turn, in the rulebook, configuring the camera, or outside the focused game window does not advance the timer. The timer also waits for reliable expression tracking.
+
+Hold a stable **Happy** classification with at least 45% confidence for about 0.9 seconds to settle her. Brief classification flickers erode that hold gradually. The view returns to the same board, scores, and pending choice. She does not ask again until the player makes a move and a new choice begins.
+
+Other expressions do not fail the encounter immediately. After a 1.5-second grace period, a hidden anger value rises toward failure over eight seconds of reliable non-happy tracking. A happy face reduces anger. Granny's lines change over three stages, the camera moves closer, and a quiet synthesized scream grows louder and sharper. At the limit she lunges closer with the existing loss scream and the run ends in **Game over**.
+
+Missing, stale, unstable, low-confidence, or unspecified expression data pauses both anger and smile progress. The prompt explains when tracking is paused. Leaving the game window also pauses the encounter and fades the pressure audio. Switching facial hurdles off returns to the board without changing any seeds.
 
 ## Play a round
 
@@ -36,7 +46,7 @@ A draw lets the player replay with the same burned pits.
 
 - **False ending.** Burn all six of Granny's pits. She opens the way out and asks you to stand. As you get up, she says the ash needs feeding and fire rises in front of you.
 - **True ending.** Burn exactly the four pits marked in the rulebook. The order is up to the player. After the fourth burn, the fire takes Granny.
-- **Game over.** A loss to Granny or a burn that takes the last playable pit on your own side triggers her close stare.
+- **Game over.** A loss to Granny, failing her optional smile demand, or a burn that takes the last playable pit on your own side triggers her close stare.
 
 The ending begins after Granny's remark on the final burn. **Start a new run** returns to the wake-up scene with all pits restored. Burned pits belong to the current run.
 

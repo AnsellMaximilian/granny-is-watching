@@ -37,6 +37,16 @@ export class SpectraSession {
 
   emit() { this.onChange(this.state); }
 
+  gameplaySignals() {
+    const active = ['measuring', 'adjust'].includes(this.state.phase)
+      && this.state.stream?.getVideoTracks()[0]?.readyState === 'live'
+      && this.now() - this.#lastFeedbackAt <= 500;
+    return {
+      healthy: Boolean(active),
+      expression: this.readings.gameplayExpression({ active, validationCode: this.state.validationCode }),
+    };
+  }
+
   stopSignals() {
     this.#signalGeneration++;
     const sdk = this.#sdk;

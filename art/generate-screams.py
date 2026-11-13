@@ -1,8 +1,9 @@
-"""Synthesize two original creature screams using Python's standard library.
+"""Synthesize original creature screams using Python's standard library.
 
 Run from any directory with Python 3.12 or newer. No recorded voices are used.
 The loss sting has a quick onset and a short tail. Granny's burning scream
-descends more slowly and has a longer, broken echo.
+descends more slowly and has a longer, broken echo. A softer, looping pressure
+layer is filtered and faded up by the game during facial encounters.
 """
 
 import argparse
@@ -38,7 +39,7 @@ class Resonator:
         return result
 
 
-def synthesize(duration, seed, burning):
+def synthesize(duration, seed, burning, pressure=False):
     rng = random.Random(seed)
     count = round(duration * SAMPLE_RATE)
     filters = [Resonator(760, 3.8), Resonator(1710, 5.2), Resonator(3080, 6.0)]
@@ -52,7 +53,7 @@ def synthesize(duration, seed, burning):
         time = index / SAMPLE_RATE
         progress = time / duration
         # Fast pitch motion and detuned harmonics give it a strained, inhuman tone.
-        pitch = (510 if burning else 680) * math.exp(-1.18 * progress)
+        pitch = (230 if pressure else 510 if burning else 680) * math.exp((-0.15 if pressure else -1.18) * progress)
         pitch += 31 * math.sin(TAU * 13.7 * time) + 19 * math.sin(TAU * 37.1 * time)
         phase += TAU * pitch / SAMPLE_RATE
         sub_phase += TAU * (67 + 18 * math.sin(time * 5.1)) / SAMPLE_RATE
@@ -67,9 +68,9 @@ def synthesize(duration, seed, burning):
         if index % 3 == 0:
             crushed = round(math.tanh(raw * 3.4) * 45) / 45
         flutter = 0.77 + 0.23 * math.sin(TAU * (47 if burning else 64) * time)
-        attack = min(1, time / 0.004)
-        release = min(1, max(0, duration - time) / 0.19) ** 1.6
-        body = math.exp(-0.8 * progress)
+        attack = min(1, time / (0.09 if pressure else 0.004))
+        release = min(1, max(0, duration - time) / (0.25 if pressure else 0.19)) ** 1.6
+        body = 1.0 if pressure else math.exp(-0.8 * progress)
         dry.append(crushed * flutter * attack * release * body)
 
     # Unequal echo taps spread the rasp across stereo without moving the attack.
@@ -105,11 +106,12 @@ def main():
                         default=Path(__file__).resolve().parents[1] / "public" / "audio")
     args = parser.parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    for name, duration, seed, burning in [
-        ("scream-loss.wav", 1.50, 937, False),
-        ("scream-granny.wav", 1.95, 1661, True),
+    for name, duration, seed, burning, pressure in [
+        ("scream-loss.wav", 1.50, 937, False, False),
+        ("scream-granny.wav", 1.95, 1661, True, False),
+        ("scream-pressure.wav", 2.40, 7103, False, True),
     ]:
-        frames = synthesize(duration, seed, burning)
+        frames = synthesize(duration, seed, burning, pressure)
         with wave.open(str(args.output_dir / name), "wb") as output:
             output.setparams((2, 2, SAMPLE_RATE, 0, "NONE", "not compressed"))
             output.writeframes(frames.tobytes())

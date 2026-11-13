@@ -15,8 +15,9 @@ import { BURN_DIALOGUE } from './burn-dialogue.js';
 import { buildRulebook } from './rulebook.js';
 import { createGameAudio } from './audio.js';
 import { mountSmartSpectra } from './smart-spectra-panel.js';
+import { FacialHurdles } from './facial-hurdles.js';
 
-mountSmartSpectra();
+const spectra = mountSmartSpectra();
 
 const $ = (id) => document.getElementById(id);
 const wake = $('wake');
@@ -129,6 +130,10 @@ async function launch() {
   let readerSpread = 0;
   let readerBusy = false;
   let resumePhase;
+  const hurdles = new FacialHurdles();
+  let facialShot;
+  const facialEncounter = $('facial-encounter');
+  const facialMode = $('facial-mode');
   const displayed = [...game.pits];
   const layer = $('pit-layer');
   const counts = PITS.map((_, i) => {
@@ -164,13 +169,14 @@ async function launch() {
       sound.scream();
     }
     const lunge = reducedMotion ? 1 : ease(Math.max(0, Math.min(1, (elapsed - 0.16) / 0.27)));
-    const distance = 1.76 * lunge;
+    const distance = (stare.close ? 0.22 : 1.76) * lunge;
     // Clear the table early in the lunge so the close-up reads as a jump.
-    const lift = 0.42 * ease(Math.min(1, lunge / 0.55)) + 0.045 * Math.sin(Math.PI * lunge);
+    const lift = (stare.close ? 0.03 : 0.42) * ease(Math.min(1, lunge / 0.55))
+      + (stare.close ? 0.01 : 0.045) * Math.sin(Math.PI * lunge);
     grannyRoot.position.set(stare.origin.x, stare.origin.y + lift, stare.origin.z + distance);
     const { x, y, z } = stare.eyes;
     view({
-      position: [x, y + lift + 0.025 + 0.14 * (1 - lunge), z + 2.10],
+      position: [x, y + lift + 0.025 + (stare.close ? 0 : 0.14) * (1 - lunge), z + (stare.close ? 0.46 : 2.10)],
       target: [x, y + lift - 0.040, z + distance],
       roll: 0,
       fov: 0.66,
@@ -187,6 +193,67 @@ async function launch() {
 
   const overheadShot = () => ({ pose: overheadPose(), overhead: 1 });
   const seatedShot = () => ({ pose: SEATED_POSE, overhead: 0 });
+
+  function capturePose() {
+    return { position: camera.position.asArray(), target: camera.getTarget().asArray(), roll: 0, fov: camera.fov };
+  }
+
+  function beginHappyEncounter() {
+    phase = 'facial-happy';
+    facialShot = {
+      start: performance.now(), from: capturePose(),
+      eyes: Vector3.TransformCoordinates(new Vector3(0, 0.111, 0.0915), grannyHead.computeWorldMatrix(true)),
+    };
+    match.hidden = true;
+    facialEncounter.hidden = false;
+    updatePitButtons();
+  }
+
+  function returnFromHappy() {
+    phase = 'facial-return';
+    facialShot = { start: performance.now(), from: capturePose() };
+    facialEncounter.hidden = true;
+    sound.stopThreat();
+  }
+
+  function updateFacialHurdles(deltaMs) {
+    if (phase !== 'game' && phase !== 'facial-happy') return;
+    const signals = spectra.gameplaySignals();
+    const focused = !document.hidden && document.hasFocus()
+      && !document.activeElement?.closest?.('#spectra-key-form, #spectra-camera-picker');
+    const event = hurdles.step(deltaMs, {
+      choosing: phase === 'game' && !busy && game.turn === PLAYER && !game.outcome,
+      focused, expression: signals.expression,
+    });
+    if (event === 'happy-start') beginHappyEncounter();
+    if (event === 'happy-pass') returnFromHappy();
+    if (event === 'happy-fail') startStare({ close: true, reason: 'Granny did not believe your smile.' });
+    if (phase === 'facial-happy') {
+      const lines = ['“Are you having fun, child?”', '“Is that all the joy you have for Granny?”', '“Smile. For Granny.”'];
+      const line = lines[hurdles.stage];
+      if ($('facial-line').textContent !== line) $('facial-line').textContent = line;
+      facialEncounter.dataset.stage = String(hurdles.stage);
+      const hint = !focused ? 'Paused while you are away from the game.'
+        : !signals.expression ? 'Tracking paused. Face the camera in even light, or turn facial hurdles off.' : '';
+      if ($('facial-tracking').textContent !== hint) $('facial-tracking').textContent = hint;
+      if (focused && signals.expression) sound.threat(hurdles.pressure);
+      else sound.stopThreat();
+    }
+  }
+
+  facialMode.addEventListener('click', () => {
+    const enabled = !hurdles.enabled;
+    hurdles.setEnabled(enabled);
+    facialMode.setAttribute('aria-pressed', String(enabled));
+    facialMode.textContent = 'Facial hurdles: ' + (enabled ? 'On' : 'Off');
+    if (enabled) void spectra.ensureCamera();
+    else {
+      sound.stopThreat();
+      if (phase === 'facial-happy') returnFromHappy();
+    }
+  });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) sound.stopThreat(); });
+  window.addEventListener('blur', () => sound.stopThreat());
 
   function fireShot(pit) {
     const { x, z } = PITS[pit];
@@ -345,6 +412,7 @@ async function launch() {
   }
 
   function enterMatch() {
+    hurdles.resetChoice();
     tableShot = undefined;
     game = newGame(game.burned, game.escapePattern);
     board.reset(game.pits);
@@ -362,6 +430,7 @@ async function launch() {
   }
 
   function endMatch() {
+    hurdles.resetChoice();
     if (game.outcome === 'win') {
       void offerBurn();
     } else if (game.outcome === 'draw') {
@@ -374,11 +443,15 @@ async function launch() {
     updatePitButtons();
   }
 
-  function startStare() {
+  function startStare({ close = false, reason = '' } = {}) {
+    sound.stopThreat();
+    facialEncounter.hidden = true;
+    facialShot = undefined;
     phase = 'loss-stare';
     phaseStart = performance.now();
     match.hidden = true;
     stare = {
+      close, reason,
       origin: grannyRoot.position.clone(),
       eyes: Vector3.TransformCoordinates(new Vector3(0, 0.111, 0.0915), grannyHead.computeWorldMatrix(true)),
     };
@@ -387,7 +460,8 @@ async function launch() {
   function showResult(title, button) {
     const [playerScore, grannyScore] = STORES.map((pit) => game.pits[pit]);
     $('result-title').textContent = title;
-    $('result-score').textContent = 'You ' + playerScore + ' · Granny ' + grannyScore;
+    $('result-score').textContent = 'You ' + playerScore + ' · Granny ' + grannyScore
+      + (phase === 'game-over' && stare?.reason ? ' · ' + stare.reason : '');
     result.classList.toggle('game-over', phase === 'game-over');
     again.textContent = button;
     result.hidden = false;
@@ -544,6 +618,7 @@ async function launch() {
   async function selectPit(pit) {
     if (phase !== 'game' || busy || game.turn !== PLAYER || !legalPits(game).includes(pit)) return;
     busy = true;
+    hurdles.resetChoice();
     updatePitButtons();
     const move = await animateMove(pit);
     let grannyBonus = false;
@@ -601,8 +676,12 @@ async function launch() {
   wake.focus({ preventScroll: true });
   let previousWidth = 0;
   let previousHeight = 0;
+  let facialTick = performance.now();
   engine.runRenderLoop(() => {
     const now = performance.now();
+    const deltaMs = now - facialTick;
+    facialTick = now;
+    updateFacialHurdles(deltaMs);
     const elapsed = (now - phaseStart) / 1000;
     let overhead = 0;
     let stareLight = 0;
@@ -628,6 +707,27 @@ async function launch() {
         view(blendPose(SEATED_POSE, overheadPose(), overhead));
       }
       if (time >= OVERHEAD_START + OVERHEAD_DURATION) needsLayout = true;
+    } else if (phase === 'facial-happy') {
+      const { x, y, z } = facialShot.eyes;
+      const amount = reducedMotion ? 1 : ease(Math.min(1, (now - facialShot.start) / 650));
+      view(blendPose(facialShot.from, {
+        position: [x, y + 0.025, z + 0.83 - 0.36 * hurdles.pressure],
+        target: [x, y - 0.04, z], roll: 0, fov: 0.66,
+      }, amount));
+      overhead = 1 - amount;
+      stareLight = 0.15 + hurdles.pressure * 0.4;
+    } else if (phase === 'facial-return') {
+      const amount = reducedMotion ? 1 : ease(Math.min(1, (now - facialShot.start) / 650));
+      view(blendPose(facialShot.from, overheadPose(), amount));
+      overhead = amount;
+      if (amount === 1) {
+        facialShot = undefined;
+        phase = 'game';
+        match.hidden = false;
+        status('Your turn', PIT_CHOICE_HINT);
+        updatePitButtons();
+        previousWidth = 0;
+      }
     } else if (phase === 'loss-stare' || phase === 'game-over') {
       stareLight = poseStare(elapsed);
       if (phase === 'loss-stare' && elapsed >= LOSS_DURATION) {

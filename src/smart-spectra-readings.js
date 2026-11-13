@@ -75,6 +75,21 @@ export class SignalReadings {
     }
   }
 
+  gameplayExpression({ active, validationCode }) {
+    const reading = this.samples.get('expression');
+    const now = this.now();
+    if (!active || ![0, 3].includes(validationCode) || !reading || reading.sample.stable !== true
+      || now - reading.timestampUs / 1000 > 450 || now - reading.receivedAt > 450) return null;
+    const scores = reading.sample.scores;
+    if (!Array.isArray(scores)) return null;
+    const best = scores.filter((score) => Number.isInteger(score.type) && score.type >= 0 && score.type <= 8
+      && Number.isFinite(score.confidence) && score.confidence >= 0 && score.confidence <= 100)
+      .reduce((highest, score) => !highest || score.confidence > highest.confidence ? score : highest, null);
+    return best && best.type !== 0 && best.confidence >= 45
+      ? { type: best.type, confidence: best.confidence, timestampUs: reading.timestampUs }
+      : null;
+  }
+
   snapshot({ active = true, validationCode = null } = {}) {
     const now = this.now();
     const elapsed = this.startedAt === null ? 0 : Math.max(0, (now - this.startedAt) / 1000);

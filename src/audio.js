@@ -4,7 +4,7 @@ const WOOD_SOUNDS = [
   'impactWood_light_003.ogg',
   'impactWood_light_004.ogg',
 ];
-const EFFECTS = [...WOOD_SOUNDS, 'fire-ignite.ogg', 'scream-loss.wav', 'scream-granny.wav'];
+const EFFECTS = [...WOOD_SOUNDS, 'fire-ignite.ogg', 'scream-loss.wav', 'scream-granny.wav', 'scream-pressure.wav'];
 const MUSIC_GAIN = 0.26;
 const AUDIO_BASE = import.meta.env.BASE_URL + 'audio/';
 
@@ -42,6 +42,20 @@ export function createGameAudio() {
   let woodIndex = 0;
   let muted = false;
   let screamsPlaying = 0;
+  let threat = null;
+
+  function duckMusic() {
+    if (background) background.gain.setTargetAtTime(MUSIC_GAIN * (screamsPlaying ? 0.18 : threat ? 0.55 : 1), context.currentTime, 0.12);
+  }
+
+  function stopThreat() {
+    if (!threat) return;
+    const retiring = threat;
+    threat = null;
+    retiring.gain.gain.setTargetAtTime(0, context.currentTime, 0.025);
+    retiring.source.stop(context.currentTime + 0.12);
+    duckMusic();
+  }
 
   function start() {
     if (!context) {
@@ -89,6 +103,33 @@ export function createGameAudio() {
 
   return {
     start,
+    stopThreat,
+    threat(level, lighter = false) {
+      if (!context) return;
+      const buffer = buffers.get('scream-pressure.wav');
+      if (!buffer) return;
+      const pressure = Number.isFinite(level) ? Math.max(0, Math.min(1, level)) : 0;
+      if (!threat) {
+        const source = context.createBufferSource();
+        const gain = context.createGain();
+        const filter = context.createBiquadFilter();
+        source.buffer = buffer;
+        source.loop = true;
+        gain.gain.value = 0;
+        filter.type = 'lowpass';
+        source.connect(filter).connect(gain).connect(master);
+        source.addEventListener('ended', () => { source.disconnect(); filter.disconnect(); gain.disconnect(); }, { once: true });
+        source.start();
+        threat = { source, gain, filter, last: null, lighter: null };
+        duckMusic();
+      }
+      if (threat.last !== null && Math.abs(threat.last - pressure) < 0.01 && threat.lighter === lighter) return;
+      threat.last = pressure;
+      threat.lighter = lighter;
+      threat.gain.gain.setTargetAtTime((0.025 + 0.42 * pressure ** 1.6) * (lighter ? 0.4 : 1), context.currentTime, 0.25);
+      threat.filter.frequency.setTargetAtTime(600 + 3600 * pressure, context.currentTime, 0.25);
+      threat.source.playbackRate.setTargetAtTime(0.68 + 0.42 * pressure, context.currentTime, 0.25);
+    },
     toggleMuted() {
       muted = !muted;
       if (master) master.gain.setTargetAtTime(muted ? 0 : 0.82, context.currentTime, 0.02);
@@ -105,10 +146,10 @@ export function createGameAudio() {
       const source = play(granny ? 'scream-granny.wav' : 'scream-loss.wav', 0.76);
       if (!source) return;
       screamsPlaying += 1;
-      background.gain.setTargetAtTime(MUSIC_GAIN * 0.18, context.currentTime, 0.035);
+      duckMusic();
       source.addEventListener('ended', () => {
         screamsPlaying -= 1;
-        if (screamsPlaying === 0) background.gain.setTargetAtTime(MUSIC_GAIN, context.currentTime, 0.35);
+        duckMusic();
       }, { once: true });
     },
   };

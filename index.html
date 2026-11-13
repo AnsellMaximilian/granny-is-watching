@@ -13,6 +13,13 @@
     <div id="eyelids" aria-hidden="true"></div>
     <div id="ending-shade" class="ending-shade" aria-hidden="true"></div>
     <button id="sound-toggle" class="sound-toggle" type="button" aria-label="Mute sound" aria-pressed="true">Sound on</button>
+    <button id="facial-mode" class="sound-toggle facial-mode" type="button" aria-pressed="false">Facial hurdles: Off</button>
+    <section id="facial-encounter" class="facial-encounter" aria-label="Granny’s demand" hidden>
+      <p class="dialogue-speaker">Granny</p>
+      <p id="facial-line" class="dialogue-line" aria-live="polite"></p>
+      <p id="facial-instruction">Show Granny a happy face.</p>
+      <p id="facial-tracking" role="status"></p>
+    </section>
     <aside id="spectra-panel" class="spectra-panel" aria-label="Camera and detected signals" data-state="off">
       <header class="spectra-heading">
         <h2><span id="spectra-light" aria-hidden="true"></span> Camera &amp; signals</h2>
@@ -43,7 +50,7 @@
           <button id="spectra-toggle" type="button" disabled>Enable camera</button>
           <button id="spectra-retry" type="button" hidden>Retry signals</button>
         </div>
-        <p class="spectra-note">Preview only · signals do not affect play</p>
+        <p class="spectra-note">Facial signals · hurdles optional</p>
       </div>
     </aside>
     <section id="intro" class="intro" aria-labelledby="game-title">

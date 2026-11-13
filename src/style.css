@@ -31,6 +31,28 @@ button:focus-visible { outline: 2px solid #ffe0a8; outline-offset: 4px; }
   cursor: pointer;
 }
 .sound-toggle:hover { color: var(--text); border-color: #d6ad76; }
+.facial-mode { right: 124px; }
+.facial-mode[aria-pressed="true"] { border-color: #cfaa6e; color: #ffe0ac; }
+.facial-encounter {
+  position: absolute;
+  bottom: clamp(20px, 6vh, 58px);
+  left: 50%;
+  translate: -50% 0;
+  width: min(70%, 620px);
+  padding: 17px 25px;
+  text-align: center;
+  background: linear-gradient(#180e0bf0, #100907e6);
+  border-top: 1px solid #b17d52;
+  z-index: 2;
+}
+.facial-encounter .dialogue-line { margin-bottom: 8px; }
+#facial-instruction { margin: 0; color: var(--gold); }
+#facial-tracking { margin: 7px 0 0; color: var(--muted); font-size: 0.8rem; }
+#facial-tracking:empty { display: none; }
+.facial-encounter[data-stage="2"] { border-color: #e39965; }
+@media (max-width: 900px) {
+  .facial-encounter { left: 148px; translate: none; width: calc(100% - 168px); padding: 12px 15px; }
+}
 .spectra-panel {
   position: absolute;
   left: 14px;
