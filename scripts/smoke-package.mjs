@@ -19,6 +19,7 @@ delete environment.SMARTSPECTRA_CAPI_PATH;
 const run = spawn(path.join(directory, 'Granny is Watching.exe'), [
   '--remote-debugging-address=127.0.0.1', '--remote-debugging-port=' + port,
   '--user-data-dir=' + profile, '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
+  '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--disable-background-timer-throttling',
 ], { env: environment, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
 const exited = new Promise(resolve => { run.on('exit', resolve); run.on('error', () => resolve('launch-error')); });
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -28,6 +29,7 @@ run.stderr.on('data', chunk => { logs += chunk; });
 let ws;
 const errors = [];
 const pending = new Map();
+let capture = async () => {};
 try {
   let page;
   for (let i = 0; i < 300 && !page; i++) {
@@ -72,10 +74,16 @@ try {
       if (await evaluate(expression)) return;
       await delay(100);
     }
-    throw Error('Packaged UI did not become ready: ' + expression);
+    const state = await evaluate('({focused:document.hasFocus(),visibility:document.visibilityState,bookDisabled:document.querySelector("#rulebook-button")?.disabled,readerHidden:document.querySelector("#book-reader")?.hidden,closeDisabled:document.querySelector("#book-close")?.disabled})');
+    throw Error('Packaged UI did not become ready: ' + expression + '\n' + JSON.stringify(state));
+  };
+  capture = async () => {
+    const screenshot = await send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+    await writeFile('release/packaged-smoke.png', Buffer.from(screenshot.data, 'base64'));
   };
   await send('Runtime.enable');
   await send('Page.enable');
+  await send('Page.bringToFront');
   await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
   await until('Boolean(document.querySelector("#wake:enabled"))');
   const config = await evaluate('window.grannySpectra.getConfig().then(c=>({packaged:c.packaged,nativeAvailable:c.nativeAvailable,hasKey:Boolean(c.apiKey)}))');
@@ -103,8 +111,7 @@ try {
   await until('!document.querySelector("#book-reader").hidden && !document.querySelector("#book-close").disabled');
   await evaluate('document.querySelector("#book-close").click()');
   await until('!document.querySelector("#match").hidden');
-  const screenshot = await send('Page.captureScreenshot', { format: 'png', fromSurface: true });
-  await writeFile('release/packaged-smoke.png', Buffer.from(screenshot.data, 'base64'));
+  await capture();
   assert.deepEqual(errors, [], 'The installed renderer must not throw during startup, continue or the rulebook.');
   progress.settings.showCamera = false;
   await evaluate('void window.grannyProgress.save(JSON.stringify(' + JSON.stringify(progress) + ')); true');
@@ -112,6 +119,10 @@ try {
   assert.equal(await Promise.race([exited, delay(10000).then(() => 'timeout')]), 0, 'Packaged shutdown should flush saves and exit cleanly.');
   assert.deepEqual(JSON.parse(await readFile(path.join(profile, 'progress.json'), 'utf8')), progress);
   console.log('Packaged Windows app passed: native FFI load, no embedded key, isolated renderer, saved round, board assets, rulebook, and clean shutdown. No camera or SDK measurement session started.');
+} catch (error) {
+  logs += '\nSmoke test failed: ' + error.message + '\n';
+  await capture().catch(() => {});
+  throw error;
 } finally {
   for (const request of pending.values()) clearTimeout(request.timer);
   ws?.close();
