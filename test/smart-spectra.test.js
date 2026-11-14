@@ -301,6 +301,18 @@ test('browser or missing-native fallback keeps the preview usable without loadin
   }
 });
 
+test('a packaged runtime failure offers reinstall guidance instead of source-development commands', async () => {
+  const { session, stream, instances } = sessionFixture();
+  session.configure({ desktop: true, packaged: true, nativeAvailable: false });
+  await session.startCamera();
+  await session.startSignals();
+  assert.equal(session.state.stream, stream);
+  assert.equal(instances.length, 0);
+  assert.match(session.state.hint, /Reinstall the game/);
+  assert.ok(!session.state.hint.includes('npm'));
+  session.stopCamera();
+});
+
 test('disconnects release the native session and late callbacks cannot revive it', async () => {
   const { session, stream, instances } = sessionFixture();
   await session.startCamera();

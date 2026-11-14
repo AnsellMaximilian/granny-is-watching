@@ -8,9 +8,20 @@ const gameFile = path.join(__dirname, '../dist/index.html');
 const gameUrl = pathToFileURL(gameFile).href;
 let environmentError = false;
 const localEnv = path.join(__dirname, '../.env.local');
-if (fs.existsSync(localEnv)) {
+if (!app.isPackaged && fs.existsSync(localEnv)) {
   try { process.loadEnvFile(localEnv); }
   catch { environmentError = true; }
+}
+
+if (app.isPackaged) {
+  // The packaged native module lives in resources/node_modules, outside ASAR.
+  // Keep the SDK's scoped DLL loader instead of a developer path override.
+  delete process.env.SMARTSPECTRA_CAPI_PATH;
+  // Keep the same local saves through installer upgrades and ZIP releases.
+  // Explicit isolated profiles remain available to the packaged smoke test.
+  if (!app.commandLine.hasSwitch('user-data-dir')) {
+    app.setPath('userData', path.join(app.getPath('appData'), 'granny-is-watching'));
+  }
 }
 
 let bindSmartSpectraIpc;
@@ -84,6 +95,7 @@ app.whenReady().then(() => {
     }
     return {
       nativeAvailable,
+      packaged: app.isPackaged,
       // Delivered only to this isolated local renderer, never baked into Vite output.
       apiKey: process.env.SMARTSPECTRA_API_KEY?.trim() || '',
       environmentError,

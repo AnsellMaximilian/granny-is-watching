@@ -24,7 +24,7 @@ export class SpectraSession {
     this.readings = new SignalReadings(now);
     this.state = {
       phase: 'off', sdkStatus: 'idle', stream: null, validationCode: null, validationAt: null, devices: [],
-      nativeAvailable: false, desktop: false, hasKey: false, needsKey: false,
+      nativeAvailable: false, desktop: false, packaged: false, hasKey: false, needsKey: false,
       hint: 'Enable your camera for a live preview. Facial analysis runs only when needed.',
     };
   }
@@ -33,6 +33,7 @@ export class SpectraSession {
     this.#key = typeof config.apiKey === 'string' ? config.apiKey.trim() : '';
     Object.assign(this.state, {
       desktop: config.desktop,
+      packaged: Boolean(config.packaged),
       nativeAvailable: config.nativeAvailable,
       hasKey: Boolean(this.#key),
       needsKey: !this.#key,
@@ -78,7 +79,9 @@ export class SpectraSession {
     this.state.sdkStatus = 'idle';
     this.state.hint = !this.state.stream ? 'Camera stopped. Enable it whenever you want a preview.'
       : !this.state.nativeAvailable ? this.state.desktop
-        ? 'Live preview only. The native SmartSpectra runtime is unavailable. Run npm ci and restart the game.'
+        ? this.state.packaged
+          ? 'Live preview only. The bundled facial runtime could not load. Reinstall the game, or continue with facial hurdles off.'
+          : 'Live preview only. The native SmartSpectra runtime is unavailable. Run npm ci and restart the game.'
         : 'Live preview only. Open the desktop game with npm start to use SmartSpectra.'
       : !this.#key ? 'Live preview ready. Enter your SmartSpectra API key in Settings to detect signals.'
       : 'Live preview only. SDK idle until a facial encounter or a 15-second signal test.';
