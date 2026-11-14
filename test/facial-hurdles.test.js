@@ -5,7 +5,7 @@ import { FacialHurdles } from '../src/facial-hurdles.js';
 const neutral = { type: 6, confidence: 85 };
 const happy = { type: 5, confidence: 85 };
 function fixture() {
-  const hurdles = new FacialHurdles();
+  const hurdles = new FacialHurdles({ random: () => 1 });
   hurdles.setEnabled(true);
   const advance = (ms, options = {}) => {
     const events = [];
@@ -81,7 +81,7 @@ test('large frame gaps do not charge a backgrounded player for elapsed wall time
   assert.equal(hurdles.active, null);
 });
 
-test('upside-down encounter is debug-triggered, keeps waiting while away, and suspends the smile timer', () => {
+test('upside-down encounter keeps waiting while away and suspends the smile timer', () => {
   const { hurdles, advance } = fixture();
   assert.equal(hurdles.activateAway(false), false);
   assert.equal(hurdles.activateAway(true), true);
@@ -92,6 +92,35 @@ test('upside-down encounter is debug-triggered, keeps waiting while away, and su
   hurdles.resetChoice();
   assert.equal(hurdles.active, null);
   assert.deepEqual(advance(5000), ['happy-start']);
+});
+
+test('random visits are rolled once per eligible choice and wait for their randomized delay', () => {
+  const values = [0.1, 0.5, 0.9];
+  let calls = 0;
+  const hurdles = new FacialHurdles({ random: () => values[calls++] });
+  hurdles.setEnabled(true);
+  for (let i = 0; i < 100; i++) hurdles.step(100, { choosing: false, facing: true, expression: neutral });
+  for (let i = 0; i < 100; i++) hurdles.step(100, { choosing: true, facing: true, expression: neutral, focused: false });
+  assert.equal(calls, 0);
+  for (let i = 0; i < 24; i++) assert.equal(hurdles.step(100, { choosing: true, facing: true, expression: neutral }), null);
+  assert.equal(calls, 2);
+  assert.equal(hurdles.step(100, { choosing: true, facing: true, expression: neutral }), 'away-start');
+  assert.equal(hurdles.active, 'away');
+  hurdles.resetChoice();
+  for (let i = 0; i < 40; i++) assert.equal(hurdles.step(100, { choosing: true, facing: true, expression: neutral }), null);
+  assert.equal(calls, 3, 'A skipped visit is not rolled again every frame');
+  assert.equal(hurdles.active, null);
+});
+
+test('away visits need fresh direction data and can occur without an expression classification', () => {
+  let calls = 0;
+  const hurdles = new FacialHurdles({ random: () => { calls++; return 0; } });
+  hurdles.setEnabled(true);
+  for (let i = 0; i < 100; i++) hurdles.step(100, { choosing: true, facing: null, expression: null });
+  assert.equal(calls, 0);
+  for (let i = 0; i < 14; i++) assert.equal(hurdles.step(100, { choosing: true, facing: false }), null);
+  assert.equal(hurdles.step(100, { choosing: true, facing: false }), 'away-start');
+  assert.equal(calls, 2);
 });
 
 test('looking toward upside-down Granny has grace and tolerance before a single theft per appearance', () => {

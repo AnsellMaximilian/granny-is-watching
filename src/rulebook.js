@@ -188,7 +188,7 @@ function pageMaterial(scene, name, page, seed, patternRows) {
 }
 
 export function buildRulebook(scene, camera, aspect, reducedMotion, escapePattern) {
-  const patternRows = [GRANNY, PLAYER].map((side) =>
+  let patternRows = [GRANNY, PLAYER].map((side) =>
     ROWS[side].flatMap((pit, column) => escapePattern.includes(pit) ? [column] : []),
   );
   const tableCenter = new Vector3(1.17, TABLE_HEIGHT + 0.039, 0.485);
@@ -286,6 +286,17 @@ export function buildRulebook(scene, camera, aspect, reducedMotion, escapePatter
   return {
     tableCenter,
     spreadCount: PAPER_SPREADS.length,
+    setPattern(pattern) {
+      const rows = [GRANNY, PLAYER].map((side) => ROWS[side].flatMap((pit, column) => pattern.includes(pit) ? [column] : []));
+      if (JSON.stringify(rows) === JSON.stringify(patternRows)) return;
+      patternRows = rows;
+      const index = PAPER_SPREADS.length - 1;
+      const previous = surfaces[index];
+      surfaces[index] = PAPER_SPREADS[index].map((page, side) =>
+        pageMaterial(scene, 'Rulebook page ' + (index * 2 + side + 1), page, 23 + index * 2 + side, patternRows));
+      showSpread(spread);
+      for (const surface of previous) surface.dispose(false, true);
+    },
     describe(index) {
       if (index === PAPER_SPREADS.length - 1) {
         const [far, near] = patternRows.map((row) => row.map((column) => column + 1).join(' and '));

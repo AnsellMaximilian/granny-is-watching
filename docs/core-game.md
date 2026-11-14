@@ -2,21 +2,33 @@
 
 The player wakes up on the floor of a candlelit house and rises to see Granny. She approaches the table, sits, and points across it. **Sit down** takes the player to the overhead congklak board.
 
-Horror gamelan starts looping when the player selects **Wake up**. Four wood impacts alternate with individual seed landings. Fire ignition accompanies every pit burn and both burning endings. A synthesized scream plays with Granny's loss lunge and with the fire that takes her in the true ending. The background music dips during screams. **Sound on / Sound off** mutes or restores all audio.
+Horror gamelan starts looping when the player selects **Wake up** or **Continue**. Four wood impacts alternate with individual seed landings. Fire ignition accompanies every pit burn and both burning endings. A synthesized scream plays with Granny's loss lunge and with the fire that takes her in the true ending. The background music dips during screams. **Settings → Sound** mutes or restores all audio.
+
+## Settings and local progress
+
+**Settings** groups sound, facial hurdles, progress saving, and camera controls. **Show camera preview** hides or reveals the corner panel without stopping facial analysis. Camera start/stop, device selection, signal retry, and the session-only API key entry are in this menu. Facial timers and pressure pause while Settings is open. Seed animations already in progress can finish behind the menu.
+
+**Save progress** starts on. A local checkpoint keeps the burned pits and the four-dot rulebook pattern. It saves the setup of the round, rather than each move. On death from losing a round or failing a facial encounter, **Retry round** restores that setup: four seeds in each unburned small pit, empty stores, and the player moving first. **Start new game** remains available and resets all burned pits and draws a new clue.
+
+**Continue** on the title screen resumes the saved round from its beginning after reopening the game. Completing a nonfatal burn updates the checkpoint to the next round, even before selecting **Next round**. Draws replay the same setup and clue. The false ending and a fatal burn can retry the last playable round; the final burn that removed an entire side is undone. The true ending clears the checkpoint.
+
+Switching **Save progress** off removes the saved checkpoint and makes death end the run. Preferences are still remembered. Re-enabling saving during a live round checkpoints that round's starting setup. Re-enabling it after a death cannot recover a run that died with saving off. Saving failures are reported in Settings; in-session retries remain available when enabled. Unreadable or incompatible saves cannot be continued, and a new game remains available.
+
+Desktop saves use `progress.json` in Electron's application data directory, with atomic replacement and queued writes. Browser development uses local browser storage. Saves stay on this device/profile, without an account or cloud sync. They contain settings and round setup, never webcam images, measurements, or API keys. Camera access starts through a player action, including starting or continuing with facial hurdles enabled.
 
 ## Camera and signals preview
 
-An optional **Camera & signals** panel sits at the bottom left throughout the game. **Enable camera** starts a mirrored live webcam preview. **Stop camera** releases the webcam and clears its readings. The **− / +** button collapses or expands the panel without stopping capture. If more than one camera is available, a selector lets the player switch. Camera or signal errors do not interrupt the game.
+An optional **Camera & signals** panel sits at the bottom left throughout the game. In Settings, **Enable camera** starts a mirrored live webcam preview. **Stop camera** releases the webcam and clears its readings. The panel's **− / +** button collapses or expands it without stopping capture. If more than one camera is available, Settings offers a device selector. Camera or signal errors do not interrupt the game.
 
 In Electron, SmartSpectra requests only facial landmarks, eye blink, talking, and facial expression. All four appear beneath the preview without rate-analysis warm-up countdowns. **Facing camera** estimates **Toward / Away** from the relative positions of the eyes, nose, and chin, with brief smoothing. This estimates head direction; eye movements alone can leave it unchanged. **Eye blink** holds a recent detection for 350 ms so it is visible. **Talking** uses facial analysis without microphone audio. **Expression** shows the highest-scoring SDK classification and its confidence.
 
 Live guidance reports face positioning, lighting, movement, and camera readiness. Missing, unstable, malformed, or stale signals show a dash with a reason. Readings expire after 1.5 seconds without a fresh sample. Losing the face or resetting tracking clears previous detections. Fresh SDK **no face** or **face not forward** feedback also shows **Facing camera: Away**, with its source explained. A camera error remains unknown. Pulse, breathing, HRV, and EDA are not requested. A missing or rejected key can be supplied through **API key**. Signal failures keep the preview available and offer a manual retry; camera failures offer a fresh start.
 
-**Facial hurdles: Off / On** toggles the optional facial gameplay mode. It starts off and can be changed at any time. Enabling it also opens the camera if needed. With it off, facial signals remain a diagnostic preview. The game does not record the webcam, save measurements, capture microphone audio, or request LLM insights. SDK telemetry is disabled. See the [setup instructions](../README.md#camera-and-smartspectra) for the local key and camera requirements.
+**Settings → Facial hurdles** toggles the optional facial gameplay mode. It defaults off on the first launch, and the preference is remembered. Enabling it also opens the camera if needed. With it off, facial signals remain a diagnostic preview. The game does not record the webcam, save measurements, capture microphone audio, or request LLM insights. SDK telemetry is disabled. See the [setup instructions](../README.md#camera-and-smartspectra) for the local key and camera requirements.
 
 ## Granny wants a smile
 
-With facial hurdles enabled, five seconds spent choosing a pit on the player's turn brings the POV up to Granny. She asks, **“Are you having fun, child?”** Pit selection pauses while she waits for a happy face. This can also happen on a bonus choice. Time spent sowing, on Granny's turn, in the rulebook, configuring the camera, or outside the focused game window does not advance the timer. The timer also waits for reliable expression tracking.
+With facial hurdles enabled, five seconds spent choosing a pit on the player's turn brings the POV up to Granny if an upside-down visit has not interrupted that choice. She asks, **“Are you having fun, child?”** Pit selection pauses while she waits for a happy face. This can also happen on a bonus choice. Time spent sowing, on Granny's turn, in the rulebook, in Settings, configuring the camera, or outside the focused game window does not advance the timer. The timer also waits for reliable expression tracking.
 
 Hold a stable **Happy** classification with at least 45% confidence for about 0.9 seconds to settle her. Brief classification flickers erode that hold gradually. The view returns to the same board, scores, and pending choice. She does not ask again until the player makes a move and a new choice begins.
 
@@ -26,7 +38,9 @@ Missing, stale, unstable, low-confidence, or unspecified expression data pauses 
 
 ## Do not look at her
 
-For this milestone, **Debug: Upside-down Granny** manually starts this encounter while facial hurdles are on and the player is choosing a pit. There are no random appearances yet. An isolated copy of Granny's head slides down from the top, upside down with black eyes and her hair toward the player's side. Her head stays above the near row. The overhead camera and all legal pit controls remain usable. The rulebook is unavailable during her visit, and the smile timer is suspended.
+While facial hurdles are on, each player pit choice has a 30% chance of an upside-down visit, including bonus choices. A selected visit starts after a random 1.5–3.5 seconds of eligible choosing time. The chance is rolled once per choice. Making a move before the delay expires avoids that visit. The timer waits for fresh facing data and pauses in Settings, the rulebook, or an unfocused window. There is no debug trigger.
+
+An isolated copy of Granny's head slides down from the top, upside down with black eyes and her hair toward the player's side. Her head stays above the near row. The overhead camera and all legal pit controls remain usable. The rulebook is unavailable during her visit, and the smile timer is suspended. A completed smile demand cannot be followed by another encounter during the same choice.
 
 Look away from the webcam while choosing a pit. A fresh **Facing camera: Away** estimate, SDK **face not forward**, or SDK **no face** feedback counts as looking away. Turning just the eyes remains unreliable; turning the head out of view is supported. A disconnected camera, stale feedback, multiple faces, or uncertain landmarks pauses the hurdle instead of counting as either direction.
 
@@ -58,7 +72,7 @@ A draw lets the player replay with the same burned pits.
 - **True ending.** Burn exactly the four pits marked in the rulebook. The order is up to the player. After the fourth burn, the fire takes Granny.
 - **Game over.** A loss to Granny, failing her optional smile demand, or a burn that takes the last playable pit on your own side triggers her close stare.
 
-The ending begins after Granny's remark on the final burn. **Start a new run** returns to the wake-up scene with all pits restored. Burned pits belong to the current run.
+The ending begins after Granny's remark on the final burn. With saving enabled, deaths offer **Retry round** and **Start new game**. Retry preserves the last playable round's burned pits and clue. **Start new game** returns to the wake-up scene with all pits restored and a new clue. The true ending offers a new game and clears its checkpoint. Burned pits belong to the current run.
 
 ## Lose and face Granny
 

@@ -1,10 +1,11 @@
 export const HAPPY_RULES = Object.freeze({ chooseMs: 5000, graceMs: 1500, angerMs: 8000, holdMs: 900 });
-export const AWAY_RULES = Object.freeze({ graceMs: 1500, angerMs: 6000 });
+export const AWAY_RULES = Object.freeze({ graceMs: 1500, angerMs: 6000, chance: 0.3, delayMinMs: 1500, delayMaxMs: 3500 });
 
 // Timing runs only while the game is foregrounded and the current signal is
 // reliable. This state stays independent of DOM text, scene poses and scores.
 export class FacialHurdles {
-  constructor() {
+  constructor({ random = Math.random } = {}) {
+    this.random = random;
     this.enabled = false;
     this.resetChoice();
   }
@@ -17,6 +18,9 @@ export class FacialHurdles {
     this.happyMs = 0;
     this.encounterMs = 0;
     this.awayPenalized = false;
+    this.awayChoiceMs = 0;
+    this.awayPlanned = false;
+    this.awayAt = null;
   }
 
   setEnabled(enabled) {
@@ -49,6 +53,16 @@ export class FacialHurdles {
         return 'away-penalty';
       }
       return null;
+    }
+    if (this.active === null && choosing && !this.resolved && typeof facing === 'boolean') {
+      if (!this.awayPlanned) {
+        this.awayPlanned = true;
+        if (this.random() < AWAY_RULES.chance) {
+          this.awayAt = AWAY_RULES.delayMinMs + this.random() * (AWAY_RULES.delayMaxMs - AWAY_RULES.delayMinMs);
+        }
+      }
+      this.awayChoiceMs += dt;
+      if (this.awayAt !== null && this.awayChoiceMs >= this.awayAt && this.activateAway(true)) return 'away-start';
     }
     if (!expression || !Number.isInteger(expression.type)
       || expression.type < 1 || expression.type > 8 || !Number.isFinite(expression.confidence)

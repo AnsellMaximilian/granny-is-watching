@@ -17,6 +17,7 @@ import { createGameAudio } from './audio.js';
 import { mountSmartSpectra } from './smart-spectra-panel.js';
 import { FacialHurdles } from './facial-hurdles.js';
 import { createUpsideDownGranny } from './upside-down-granny.js';
+import { ProgressStore, browserProgressStorage, validCheckpoint } from './progress-store.js';
 
 const spectra = mountSmartSpectra();
 
@@ -35,6 +36,9 @@ const bookNext = $('book-next');
 const bookClose = $('book-close');
 const canvas = $('scene');
 const handCount = $('hand-count');
+const settingsDialog = $('settings-dialog');
+const settingsButton = $('settings-button');
+const continueRun = $('continue-run');
 const PIT_CHOICE_HINT = 'Choose an occupied pit on the near row. You can also press 1–' + ROWS[PLAYER].length + '.';
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const modelUrl = import.meta.env.BASE_URL + 'models/granny.glb';
@@ -78,13 +82,21 @@ function wakePose(time) {
 }
 
 async function launch() {
+  const storage = window.grannyProgress ? {
+    async read() {
+      const result = await window.grannyProgress.load();
+      if (result.error) throw new Error('Local save unavailable.');
+      return result.data;
+    },
+    async write(json) {
+      const result = await window.grannyProgress.save(json);
+      if (!result.ok) throw new Error('Local save unavailable.');
+    },
+  } : browserProgressStorage();
+  const progress = await ProgressStore.load(storage);
+  const preferences = progress.settings;
   const sound = createGameAudio();
-  $('sound-toggle').addEventListener('click', () => {
-    const muted = sound.toggleMuted();
-    $('sound-toggle').textContent = muted ? 'Sound off' : 'Sound on';
-    $('sound-toggle').setAttribute('aria-pressed', String(!muted));
-    $('sound-toggle').setAttribute('aria-label', muted ? 'Unmute sound' : 'Mute sound');
-  });
+  sound.setMuted(!preferences.sound);
   const engine = new Engine(canvas, true, { preserveDrawingBuffer: false, stencil: true });
   const scene = new Scene(engine);
   scene.useRightHandedSystem = true;
@@ -134,9 +146,10 @@ async function launch() {
   let resumePhase;
   const hurdles = new FacialHurdles();
   let facialShot;
+  let roundCheckpoint = null;
+  let deathCheckpoint = null;
+  let lastEnding = null;
   const facialEncounter = $('facial-encounter');
-  const facialMode = $('facial-mode');
-  const debugAway = $('debug-away');
   const displayed = [...game.pits];
   const layer = $('pit-layer');
   const counts = PITS.map((_, i) => {
@@ -223,18 +236,26 @@ async function launch() {
     if (phase !== 'game' && phase !== 'facial-happy') return;
     const signals = spectra.gameplaySignals();
     const focused = !document.hidden && document.hasFocus()
+      && !settingsDialog.open
       && !document.activeElement?.closest?.('#spectra-key-form, #spectra-camera-picker');
+    const pausedHint = settingsDialog.open ? 'Paused while Settings are open.' : 'Paused while you are away from the game.';
     const event = hurdles.step(deltaMs, {
       choosing: phase === 'game' && !busy && game.turn === PLAYER && !game.outcome,
       focused, expression: signals.expression, facing: signals.facing,
     });
     if (event === 'happy-start') beginHappyEncounter();
+    if (event === 'away-start') {
+      upsideDown.show(performance.now());
+      match.classList.add('away-encounter');
+      spectra.setEncounter('away');
+      updatePitButtons();
+    }
     if (event === 'happy-pass') returnFromHappy();
     if (event === 'happy-fail') startStare({ close: true, reason: 'Granny did not believe your smile.' });
     if (event === 'away-penalty') void applyAwayPenalty();
     if (hurdles.active === 'away') {
       if (!busy) {
-        const hint = !focused ? 'Paused while you are away from the game.'
+        const hint = !focused ? pausedHint
           : !signals.healthy || signals.facing === null ? 'Tracking paused. Reconnect the camera, or switch facial hurdles off.'
           : hurdles.awayPenalized ? 'She has taken her due. Choose a pit to send her away.'
           : 'Look away from the camera while choosing an occupied pit on your side.';
@@ -248,7 +269,7 @@ async function launch() {
       const line = lines[hurdles.stage];
       if ($('facial-line').textContent !== line) $('facial-line').textContent = line;
       facialEncounter.dataset.stage = String(hurdles.stage);
-      const hint = !focused ? 'Paused while you are away from the game.'
+      const hint = !focused ? pausedHint
         : !signals.expression ? 'Tracking paused. Face the camera in even light, or turn facial hurdles off.' : '';
       if ($('facial-tracking').textContent !== hint) $('facial-tracking').textContent = hint;
       if (focused && signals.expression) sound.threat(hurdles.pressure);
@@ -256,13 +277,10 @@ async function launch() {
     }
   }
 
-  facialMode.addEventListener('click', () => {
-    const enabled = !hurdles.enabled;
+  function setFacialMode(enabled, startCamera = false) {
     hurdles.setEnabled(enabled);
-    facialMode.setAttribute('aria-pressed', String(enabled));
-    facialMode.textContent = 'Facial hurdles: ' + (enabled ? 'On' : 'Off');
-    if (enabled) void spectra.ensureCamera();
-    else {
+    if (enabled && startCamera) void spectra.ensureCamera();
+    if (!enabled) {
       sound.stopThreat();
       upsideDown.dismiss(performance.now());
       match.classList.remove('away-encounter');
@@ -271,14 +289,60 @@ async function launch() {
       else if (phase === 'game' && !busy) status('Your turn', PIT_CHOICE_HINT);
     }
     updatePitButtons();
+  }
+
+  function updateResultControls() {
+    const death = phase === 'game-over' || (phase === 'ending-result' && lastEnding === 'false');
+    const retry = death && preferences.saveProgress && deathCheckpoint !== null;
+    again.textContent = retry ? 'Retry round' : phase === 'draw' ? 'Replay round' : 'Start new game';
+    $('new-game').hidden = !retry && phase !== 'draw';
+    $('retry-hint').textContent = retry
+      ? 'Restart round ' + (deathCheckpoint.burned.length + 1) + '. Your burned pits and rulebook clue are kept.'
+      : death ? 'This run has ended. Saving is off or no round checkpoint is available.' : '';
+  }
+
+  function updateProgressUI() {
+    const checkpoint = progress.getCheckpoint();
+    continueRun.hidden = !checkpoint;
+    continueRun.textContent = checkpoint ? 'Continue · Round ' + (checkpoint.burned.length + 1) : 'Continue';
+    if (!wake.disabled) wake.textContent = checkpoint ? 'New game' : 'Wake up';
+    const saved = checkpoint ? 'Round ' + (checkpoint.burned.length + 1) + ' saved on this device. ' + checkpoint.burned.length + ' burned pits kept.' : 'Your round will be saved on this device.';
+    $('save-status').textContent = progress.issue || (preferences.saveProgress ? saved : 'Saving off. Death ends the run.');
+    $('save-status').dataset.error = String(Boolean(progress.issue));
+    $('intro-save-status').textContent = progress.issue || (checkpoint ? 'Continue restarts the saved round with burned pits and the same clue.' : '');
+    if (!result.hidden) updateResultControls();
+  }
+
+  function recordRoundCheckpoint() {
+    roundCheckpoint = validCheckpoint(game);
+    if (preferences.saveProgress && roundCheckpoint) void progress.saveRound(roundCheckpoint).then(updateProgressUI);
+    else updateProgressUI();
+  }
+
+  settingsButton.addEventListener('click', () => {
+    if (!settingsDialog.open) settingsDialog.showModal();
+    sound.stopThreat();
+    updateProgressUI();
   });
-  debugAway.addEventListener('click', () => {
-    if (!hurdles.activateAway(phase === 'game' && !busy && game.turn === PLAYER && !game.outcome)) return;
-    upsideDown.show(performance.now());
-    match.classList.add('away-encounter');
-    spectra.setEncounter('away');
-    updatePitButtons();
-  });
+  for (const id of ['settings-close', 'settings-done']) $(id).addEventListener('click', () => settingsDialog.close());
+  settingsDialog.addEventListener('close', () => { $('spectra-key').value = ''; settingsButton.focus({ preventScroll: true }); });
+  for (const [id, key] of [['setting-sound', 'sound'], ['setting-facial', 'facialHurdles'], ['setting-save', 'saveProgress'], ['setting-camera', 'showCamera']]) {
+    $(id).checked = preferences[key];
+    $(id).addEventListener('change', () => {
+      const value = $(id).checked;
+      void progress.updateSettings({ [key]: value }).then(updateProgressUI);
+      if (key === 'sound') sound.setMuted(!value);
+      if (key === 'facialHurdles') setFacialMode(value, value);
+      if (key === 'showCamera') spectra.setPreviewVisible(value);
+      if (key === 'saveProgress') {
+        if (!value) deathCheckpoint = null;
+        else if (roundCheckpoint && !lastEnding && !['title', 'loss-stare', 'game-over', 'ending-result'].includes(phase)) {
+          void progress.saveRound(roundCheckpoint).then(updateProgressUI);
+        }
+      }
+      updateProgressUI();
+    });
+  }
   document.addEventListener('visibilitychange', () => { if (document.hidden) sound.stopThreat(); });
   window.addEventListener('blur', () => sound.stopThreat());
 
@@ -376,7 +440,6 @@ async function launch() {
       if (burnable) element.setAttribute('aria-label', 'Burn ' + pitName(pit));
     }
     rulebookButton.disabled = hurdles.active === 'away' || (phase !== 'burn' && (phase !== 'game' || busy || game.turn !== PLAYER || game.outcome !== null));
-    debugAway.hidden = !hurdles.enabled || phase !== 'game' || busy || game.turn !== PLAYER || Boolean(game.outcome) || hurdles.active !== null;
   }
 
   function updateReader() {
@@ -446,6 +509,8 @@ async function launch() {
     hurdles.resetChoice();
     tableShot = undefined;
     game = newGame(game.burned, game.escapePattern);
+    lastEnding = null;
+    deathCheckpoint = null;
     board.reset(game.pits);
     board.setBurned(game.burned);
     game.pits.forEach((count, pit) => showCount(pit, count));
@@ -456,6 +521,7 @@ async function launch() {
     result.hidden = true;
     $('round-label').textContent = 'Round ' + (game.burned.length + 1);
     status('Your turn', PIT_CHOICE_HINT);
+    recordRoundCheckpoint();
     updatePitButtons();
     layOutPits();
   }
@@ -470,7 +536,7 @@ async function launch() {
     } else if (game.outcome === 'draw') {
       phase = 'draw';
       status('A draw', 'Replay with the same pits.');
-      showResult('A draw', 'Replay round');
+      showResult('A draw');
     } else {
       startStare();
     }
@@ -478,6 +544,7 @@ async function launch() {
   }
 
   function startStare({ close = false, reason = '' } = {}) {
+    deathCheckpoint = preferences.saveProgress && roundCheckpoint ? validCheckpoint(roundCheckpoint) : null;
     upsideDown.hide();
     match.classList.remove('away-encounter');
     spectra.setEncounter(null);
@@ -494,13 +561,13 @@ async function launch() {
     };
   }
 
-  function showResult(title, button) {
+  function showResult(title) {
     const [playerScore, grannyScore] = STORES.map((pit) => game.pits[pit]);
     $('result-title').textContent = title;
     $('result-score').textContent = 'You ' + playerScore + ' · Granny ' + grannyScore
       + (phase === 'game-over' && stare?.reason ? ' · ' + stare.reason : '');
     result.classList.toggle('game-over', phase === 'game-over');
-    again.textContent = button;
+    updateResultControls();
     result.hidden = false;
     again.focus({ preventScroll: true });
   }
@@ -543,6 +610,11 @@ async function launch() {
     sound.ignite(PITS[pit].x);
     await board.ignite(pit);
     game = { ...game, burned };
+    if (!ending) recordRoundCheckpoint();
+    else if (ending === 'true') {
+      roundCheckpoint = null;
+      void progress.clearCheckpoint().then(updateProgressUI);
+    }
     board.setBurned(burned);
     showCount(pit, 0);
     await wait(250);
@@ -557,6 +629,8 @@ async function launch() {
   }
 
   async function playEnding(ending) {
+    lastEnding = ending;
+    if (ending === 'false') deathCheckpoint = preferences.saveProgress && roundCheckpoint ? validCheckpoint(roundCheckpoint) : null;
     if (ending === 'no-ground') {
       await speak('You burned all your own ground. Where will you stand now?', 'Continue');
       startStare();
@@ -587,7 +661,7 @@ async function launch() {
     $('ending-shade').classList.add('dark');
     await wait(reducedMotion ? 0 : 550);
     phase = 'ending-result';
-    showResult(ending === 'true' ? 'True ending' : 'False ending', 'Start a new run');
+    showResult(ending === 'true' ? 'True ending' : 'False ending');
   }
 
   async function animateTransfer(step, mover, captured) {
@@ -700,8 +774,70 @@ async function launch() {
     else updatePitButtons();
   }
 
+  function resetEncounterView() {
+    sound.stopThreat();
+    upsideDown.hide();
+    match.classList.remove('away-encounter');
+    spectra.setEncounter(null);
+    hurdles.resetChoice();
+    facialEncounter.hidden = true;
+    facialShot = undefined;
+    stare = undefined;
+    tableShot = undefined;
+    dialogue.hidden = true;
+    reader.hidden = true;
+    $('invitation').hidden = true;
+    $('ending-shade').classList.remove('dark');
+    result.hidden = true;
+    grannyRoot.setEnabled(true);
+    showHand();
+    mark();
+    if (settingsDialog.open) settingsDialog.close();
+  }
+
+  function restoreRound(checkpoint) {
+    const saved = validCheckpoint(checkpoint);
+    if (!saved) return;
+    resetEncounterView();
+    game = newGame(saved.burned, saved.escapePattern);
+    rulebook.setPattern(game.escapePattern);
+    poseGranny(INVITATION_TIME + OVERHEAD_START + OVERHEAD_DURATION);
+    $('intro').hidden = true;
+    phase = 'game';
+    view(overheadPose());
+    scene.render();
+    enterMatch();
+    counts[legalPits(game)[0]].element.focus({ preventScroll: true });
+    sound.start();
+    if (preferences.facialHurdles) void spectra.ensureCamera();
+  }
+
+  function startNewGame() {
+    resetEncounterView();
+    game = newGame();
+    roundCheckpoint = null;
+    deathCheckpoint = null;
+    lastEnding = null;
+    busy = false;
+    phase = 'title';
+    phaseStart = performance.now();
+    poseGranny(0);
+    rulebook.setPattern(game.escapePattern);
+    board.reset(game.pits);
+    board.setBurned(game.burned);
+    game.pits.forEach((count, pit) => showCount(pit, count));
+    match.hidden = true;
+    $('intro').hidden = false;
+    void progress.clearCheckpoint().then(updateProgressUI);
+    updateProgressUI();
+    updatePitButtons();
+    wake.focus({ preventScroll: true });
+  }
+
   wake.addEventListener('click', () => {
     sound.start();
+    if (preferences.facialHurdles) void spectra.ensureCamera();
+    recordRoundCheckpoint();
     $('intro').hidden = true;
     if (!reducedMotion) $('eyelids').classList.add('opening');
     phase = 'wake';
@@ -714,13 +850,22 @@ async function launch() {
   });
   again.addEventListener('click', () => {
     if (phase === 'draw') enterMatch();
-    else if (phase === 'game-over' || phase === 'ending-result') window.location.reload();
+    else if (phase === 'game-over' || phase === 'ending-result') {
+      if (preferences.saveProgress && deathCheckpoint) restoreRound(deathCheckpoint);
+      else startNewGame();
+    }
+  });
+  $('new-game').addEventListener('click', startNewGame);
+  continueRun.addEventListener('click', () => {
+    const checkpoint = progress.getCheckpoint();
+    if (checkpoint) restoreRound(checkpoint);
   });
   rulebookButton.addEventListener('click', () => void openRulebook());
   bookPrevious.addEventListener('click', () => void turnBook(-1));
   bookNext.addEventListener('click', () => void turnBook(1));
   bookClose.addEventListener('click', () => void closeRulebook());
   window.addEventListener('keydown', (event) => {
+    if (settingsDialog.open) return;
     if (event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
     if (event.target.closest?.('input, select, textarea, [contenteditable="true"]')) return;
     if (phase === 'book') {
@@ -735,8 +880,11 @@ async function launch() {
   window.addEventListener('resize', () => engine.resize());
 
   wake.disabled = false;
-  wake.textContent = 'Wake up';
-  wake.focus({ preventScroll: true });
+  settingsButton.disabled = false;
+  setFacialMode(preferences.facialHurdles);
+  spectra.setPreviewVisible(preferences.showCamera);
+  updateProgressUI();
+  (continueRun.hidden ? wake : continueRun).focus({ preventScroll: true });
   let previousWidth = 0;
   let previousHeight = 0;
   let facialTick = performance.now();
@@ -795,7 +943,7 @@ async function launch() {
       stareLight = poseStare(elapsed);
       if (phase === 'loss-stare' && elapsed >= LOSS_DURATION) {
         phase = 'game-over';
-        showResult('Game over', 'Start a new run');
+        showResult('Game over');
       }
     } else if (phase === 'book') {
       overhead = 1;

@@ -130,8 +130,8 @@ export function createGameAudio() {
       threat.filter.frequency.setTargetAtTime(600 + 3600 * pressure, context.currentTime, 0.25);
       threat.source.playbackRate.setTargetAtTime(0.68 + 0.42 * pressure, context.currentTime, 0.25);
     },
-    toggleMuted() {
-      muted = !muted;
+    setMuted(value) {
+      muted = Boolean(value);
       if (master) master.gain.setTargetAtTime(muted ? 0 : 0.82, context.currentTime, 0.02);
       return muted;
     },

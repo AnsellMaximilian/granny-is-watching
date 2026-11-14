@@ -4,7 +4,7 @@
 **Also known as:** *dakon*, *dhakon*, *congkak* (names vary by region)  
 **Document type:** Detailed, self-contained rules reference  
 **Edition:** Six small pits per side with four starting seeds per pit\
-**Last prepared:** 13 November 2026
+**Last prepared:** 14 November 2026
 
 > **Regional rules.** Indonesian families, schools, clubs, and regions may differ on who starts, how a capture works, and when a new round starts. Sections 1–12 describe the version played in *Granny is Watching*. Section 13 gives context on other customs.
 
@@ -50,7 +50,8 @@
 | End of one game | After a move resolves with either row empty |
 | Winner | Player with more seeds in their store after the remaining seeds are collected |
 | Progression | Win to burn one small pit on either side. Draw to replay the same board. Lose and the run ends. |
-| Optional facial hurdles | A delayed choice can trigger a smile demand. Debug-triggered upside-down Granny can steal one occupied player pit into her store. |
+| Optional facial hurdles | A delayed choice can trigger a smile demand. Random upside-down visits can steal one occupied player pit into her store. |
+| Local progress | Saving is on by default. Retry a death from the round's starting setup, keeping burned pits and the same clue. Saving off makes death end the run. |
 
 ## 2. What Congklak is
 
@@ -140,7 +141,7 @@ On your turn, choose **one unburned small pit on your own side** containing at l
 
 Click an occupied pit on the near row or press **1–6** for pits **A1–A6** from left to right. Granny picks a legal pit automatically. Her row and store highlight briefly while she chooses.
 
-Typing in the camera panel's API key field or using its camera selector does not trigger pit shortcuts. The optional **Facial hurdles** mode can interrupt a delayed choice with Granny's smile demand. Satisfying her resumes the same board; failing ends the run. The debug-triggered upside-down encounter keeps pit selection available and requires looking away. Failing it steals every seed from one random occupied, unburned player pit into Granny's store, at most once per appearance. Choosing a pit dismisses her. Sowing and scoring rules stay the same. See the [facial encounter rules](core-game.md#granny-wants-a-smile) and [look-away rules](core-game.md#do-not-look-at-her).
+Pit shortcuts are inactive while Settings is open, including when entering an API key or choosing a camera. **Settings → Facial hurdles** enables Granny's smile demand and random upside-down visits. Each choice has a 30% chance of a visit after a random 1.5–3.5 seconds of eligible choosing time; the chance is rolled once per choice. A visit keeps pit selection available and requires looking away. Failing it steals every seed from one random occupied, unburned player pit into Granny's store, at most once per appearance. Choosing a pit dismisses her. Satisfying a smile demand resumes the same board; failing causes death. Sowing and scoring rules stay the same. See the [facial encounter rules](core-game.md#granny-wants-a-smile) and [look-away rules](core-game.md#do-not-look-at-her).
 
 ### 7.2 Picking up seeds
 
@@ -257,7 +258,7 @@ In the opening round, if you finish with **31** seeds and Granny has **17**, you
 
 - **Win:** Granny asks which pit to burn from across the table. Select **Choose a pit**, then choose one unburned small pit on either side. After it burns and Granny comments, select **Next round** if the run continues. Each playable pit starts with four seeds and the stores start empty. Both sides skip burned pits.
 - **Draw:** Choose **Replay round** to reset the seeds with the same burned pits.
-- **Loss:** Granny lunges into a close stare and the game shows **Game over**. **Start a new run** restores the original board and returns to the wake-up scene.
+- **Loss:** Granny lunges into a close stare and the game shows **Game over**. With **Save progress** on, **Retry round** restores the beginning of the round: the same burned pits and clue, four seeds in each unburned small pit, empty stores, and the player moving first. Facial deaths use the same checkpoint. **Start new game** restores every pit and draws a new clue. With saving off, death ends the run and only a new game is available.
 
 The rulebook on the table includes a four-dot clue on its last page. Each new run draws two marked pits per side and keeps them for every round in that run. Burn exactly the four marked pits in any order for the true ending. Burning all of Granny's pits gives the false ending. Burning the last playable pit on your side ends the run in defeat. Select **Continue** after Granny's remark to see the ending. See [core gameplay](core-game.md) for the full run flow.
 
@@ -529,7 +530,8 @@ FINISH
   Burning Granny’s entire row gives the false ending.
   Burning your entire row ends the run in defeat.
   Draw: Replay with the same burned pits.
-  Loss: Granny stares you down. Start a new run to reset the board.
+  Loss: Retry the round when saving is on; burned pits and clue stay.
+  Saving off: death ends the run. A new game restores all pits and draws a new clue.
 ```
 
 ---

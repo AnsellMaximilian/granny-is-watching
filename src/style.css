@@ -18,7 +18,7 @@ main, #scene, .lens { position: absolute; inset: 0; width: 100%; height: 100%; }
 [hidden] { display: none !important; }
 button { font: inherit; }
 button:focus-visible { outline: 2px solid #ffe0a8; outline-offset: 4px; }
-.sound-toggle {
+.settings-button {
   position: absolute;
   inset: 12px 14px auto auto;
   z-index: 3;
@@ -30,23 +30,44 @@ button:focus-visible { outline: 2px solid #ffe0a8; outline-offset: 4px; }
   font-size: 0.8rem;
   cursor: pointer;
 }
-.sound-toggle:hover { color: var(--text); border-color: #d6ad76; }
-.facial-mode { right: 124px; }
-.facial-mode[aria-pressed="true"] { border-color: #cfaa6e; color: #ffe0ac; }
-.debug-away {
-  position: absolute;
-  right: 14px;
-  bottom: 14px;
-  z-index: 3;
-  padding: 6px 9px;
-  color: var(--muted);
-  background: #20130fee;
-  border: 1px dashed #a37145;
-  border-radius: 2px;
-  font-size: 0.7rem;
-  cursor: pointer;
+.settings-button:hover { color: var(--text); border-color: #d6ad76; }
+.settings-dialog {
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100dvh - 36px);
+  overflow-y: auto;
+  padding: 22px 26px;
+  color: var(--text);
+  background: #1b1311;
+  border: 1px solid #a87e52;
+  border-radius: 5px;
+  box-shadow: 0 15px 60px #000a;
 }
-.debug-away:hover { color: var(--text); border-color: var(--gold); }
+.settings-dialog::backdrop { background: #0b0707c9; }
+.settings-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 8px; }
+.settings-heading h2 { margin: 0; font: 400 2rem var(--serif); }
+.settings-heading button { padding: 0 5px; color: var(--muted); background: none; border: 0; cursor: pointer; font-size: 1.6rem; }
+.setting-row { display: flex; align-items: center; justify-content: space-between; gap: 22px; padding: 12px 0; border-bottom: 1px solid #a87e523d; cursor: pointer; }
+.setting-row small { display: block; color: var(--muted); margin-top: 4px; font-size: 0.78rem; line-height: 1.4; }
+.setting-row input[type="checkbox"] { flex: 0 0 auto; width: 19px; height: 19px; accent-color: var(--gold); cursor: pointer; }
+.settings-status { margin: 10px 0; color: var(--muted); font-size: 0.78rem; line-height: 1.45; }
+.settings-status[data-error="true"] { color: #ffc494; }
+.settings-note { color: var(--muted); font-size: 0.75rem; margin: 18px 0; }
+.camera-settings h3 { font-size: 0.95rem; font-weight: 600; margin: 22px 0 0; }
+.camera-settings button, .camera-settings input[type="password"], .camera-settings select {
+  color: var(--text); font: inherit; background: #302219; border: 1px solid #856445;
+  border-radius: 3px; padding: 7px 10px; min-width: 0;
+}
+.camera-settings button, .camera-settings summary { cursor: pointer; }
+.camera-settings summary { color: var(--muted); padding-block: 7px; font-size: 0.85rem; }
+.camera-settings button:hover { background: #533b28; }
+.camera-settings button:disabled { opacity: 0.5; cursor: default; }
+#continue-run { margin-bottom: 12px; }
+.intro-save-status { color: var(--muted); font-size: 0.85rem; max-width: 400px; margin: 12px 0 0; }
+.intro-save-status:empty { display: none; }
+.result-actions { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.action.secondary { min-height: 38px; font-size: 0.9rem; color: var(--muted); background: transparent; border-color: #856445; box-shadow: none; }
+#retry-hint { margin: 0 0 18px; max-width: 420px; color: var(--muted); font-size: 0.85rem; }
+#retry-hint:empty { display: none; }
 .facial-encounter {
   position: absolute;
   bottom: clamp(20px, 6vh, 58px);

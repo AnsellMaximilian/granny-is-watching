@@ -183,7 +183,7 @@ export function spectraError(error) {
   };
   if (cameraErrors[error?.name]) return cameraErrors[error.name];
   const errors = {
-    2: 'SmartSpectra rejected the API key. Enter a valid key below, then retry signals.',
+    2: 'SmartSpectra rejected the API key. Enter a valid key in Settings, then retry signals.',
     3: 'SmartSpectra could not configure these signals on this device. Update or reinstall the SDK, then retry.',
     4: 'SmartSpectra credits are exhausted. Check your developer account before retrying.',
     5: 'SmartSpectra could not authenticate online. Check your connection, then retry signals.',

@@ -31,7 +31,7 @@ export class SpectraSession {
       hasKey: Boolean(this.#key),
       needsKey: !this.#key,
     });
-    if (config.environmentError) this.state.hint = 'The local key file could not be loaded. You can enter a key below.';
+    if (config.environmentError) this.state.hint = 'The local key file could not be loaded. You can enter a key in Settings.';
     this.emit();
   }
 
@@ -162,7 +162,7 @@ export class SpectraSession {
         ? this.state.desktop
           ? 'Live preview only. The native SmartSpectra runtime is unavailable. Run npm ci and restart the game.'
           : 'Live preview only. Open the desktop game with npm start to use SmartSpectra.'
-        : 'Live preview ready. Enter your SmartSpectra API key below to detect signals.';
+        : 'Live preview ready. Enter your SmartSpectra API key in Settings to detect signals.';
       this.emit();
       return;
     }

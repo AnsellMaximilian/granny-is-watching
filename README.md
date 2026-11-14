@@ -15,11 +15,19 @@ Choose **Wake up**, then **Sit down**. On your turn, click an occupied pit on th
 
 Each side starts with six small pits and four seeds in each pit, for 48 seeds total. Win to burn one pit for the rest of the run. Draw to replay the same board. Lose and Granny lunges into a close stare before game over. Click the rulebook on the table to read the rules and find its final clue. See [core gameplay](docs/core-game.md) and the [congklak rules](docs/congklak-rules.md).
 
+## Settings and saving
+
+**Settings** contains sound, facial hurdles, progress saving, camera controls, and the preview visibility toggle. Preferences are remembered. Facial encounters pause while the menu is open.
+
+**Save progress** is on by default. A checkpoint retains burned pits and the rulebook clue. After a round loss or facial death, **Retry round** starts that round over with four seeds per playable pit and empty stores. **Start new game** resets the run and draws a new clue. **Continue** resumes the saved round after reopening the app. Nonfatal burns save the next round's setup. The true ending clears its checkpoint; fatal burns retry the last playable setup.
+
+Turn saving off for a run without death retries. This removes the checkpoint. Turning it back on during play saves the current round's starting setup; it cannot resurrect a run after a saving-off death. Desktop data is stored locally as `progress.json` in Electron's application data directory. Browser development uses local browser storage. There is no account or cloud sync. Storage errors are shown in Settings, and no credentials, webcam images, or measurements are saved.
+
 ## Camera and SmartSpectra
 
-The bottom-left **Camera & signals** panel previews facial analysis. Choose **Enable camera** to start your webcam. **Stop camera** releases it. The **−** button collapses the panel while capture continues. **Facial hurdles: Off / On** toggles gameplay integration and starts the camera if needed. It starts off.
+The bottom-left **Camera & signals** panel previews facial analysis. Use **Settings → Enable camera** to start your webcam. **Stop camera** releases it. The **−** button collapses the panel while capture continues. **Settings → Facial hurdles** toggles gameplay integration and starts the camera if needed. It defaults off and remembers your choice. Starting or continuing a run opens the camera when this preference is enabled.
 
-Copy `.env.example` to `.env.local` in the project root and set `SMARTSPECTRA_API_KEY` to your Presage developer key, then restart `npm start`. An existing environment variable takes precedence. Alternatively, enter a key through the panel's **API key** section. An entered key lasts for this app session only. Keys are not included in the renderer build, saved in browser storage, or committed. Each testing machine needs its own local configuration.
+Copy `.env.example` to `.env.local` in the project root and set `SMARTSPECTRA_API_KEY` to your Presage developer key, then restart `npm start`. An existing environment variable takes precedence. Alternatively, enter a key through **Settings → API key**. An entered key lasts for this app session only. Keys are not included in the renderer build, saved in progress data, or committed. Each testing machine needs its own local configuration.
 
 The Electron app uses SmartSpectra Node SDK **3.5.0** with its bundled native runtime. Use a supported desktop platform (Windows x64, Apple Silicon macOS, or glibc 2.35+ Linux x64/ARM64). `npm ci` installs the native dependencies for all supported platforms. Camera processing requires the desktop app; browser development supports a live preview only. Online authentication and available SmartSpectra credits are required for detection.
 
@@ -33,7 +41,7 @@ Camera access, missing cameras, busy/disconnected devices, missing or rejected k
 
 With facial hurdles on, spending five seconds choosing a pit brings Granny close to ask whether you're having fun. Hold a confident happy expression briefly to return to your unchanged board. Other expressions gradually increase hidden anger through three dialogue stages and an escalating scream before game over. Uncertain or missing tracking pauses the encounter. Turning the mode off resumes play. See the [full encounter rules](docs/core-game.md#granny-wants-a-smile).
 
-On a player choice, **Debug: Upside-down Granny** starts the second encounter. Look away from the webcam while choosing a pit. Her black-eyed, inverted head leaves the player row clear and stays until a pit is chosen. Looking toward her for too long builds a lighter scream and lets her steal one occupied player pit into her store. Each appearance can steal once. Fresh no-face feedback supports turning fully away; camera failures pause the pressure. This encounter is manually triggered for now. See [the look-away rules](docs/core-game.md#do-not-look-at-her).
+Each player choice has a 30% chance of an upside-down visit after a random 1.5–3.5 seconds of eligible choosing time. Look away from the webcam while choosing a pit. Her black-eyed, inverted head leaves the player row clear and stays until a pit is chosen. Looking toward her for too long builds a lighter scream and lets her steal one occupied player pit into her store. Each appearance can steal once. Fresh no-face feedback supports turning fully away; camera failures pause the pressure. The debug trigger has been removed. See [the look-away rules](docs/core-game.md#do-not-look-at-her).
 
 Video and signal processing stay on-device. The game does not record the feed or persist measurements, request microphone access, or request LLM insights. SDK session and readiness telemetry are disabled. Authentication still contacts Presage. See the [official Electron integration](https://smartspectra.presagetech.com/docs/nodejs/), [metric schema](https://smartspectra.presagetech.com/docs/data-types/), and [measurement guidance](https://smartspectra.presagetech.com/docs/measurement-quality/).
 
@@ -41,7 +49,7 @@ Video and signal processing stay on-device. The game does not record the feed or
 
 - `npm run dev` starts the Babylon.js renderer in a browser.
 - `npm run build` builds the renderer and sandboxed Electron preload.
-- `npm test` checks the rules, seed conservation, facial hurdles, signal quality handling, and camera/session lifecycle.
+- `npm test` checks the rules, seed conservation, randomized facial hurdles, local saves, progress IPC, signal quality handling, and camera/session lifecycle.
 - `blender --background --python art/build-granny.py` rebuilds the animated Granny GLB with Blender 5.x. The room, candlelight, furniture, and carved board are generated by the renderer.
 - `python art/generate-screams.py` rebuilds the original scream effects and the looping pressure layer with Python's standard library.
 

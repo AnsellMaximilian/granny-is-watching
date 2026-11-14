@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, session } = require('electron');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const fs = require('node:fs');
+const { registerProgressIpc } = require('./progress.cjs');
 
 const gameFile = path.join(__dirname, '../dist/index.html');
 const gameUrl = pathToFileURL(gameFile).href;
@@ -54,6 +55,14 @@ function openGame() {
 }
 
 app.whenReady().then(() => {
+  const progress = registerProgressIpc({ app, ipcMain, isTrusted: (event) => event.senderFrame === event.sender.mainFrame && isGamePage(event.senderFrame.url) });
+  let quitting = false;
+  app.on('before-quit', (event) => {
+    if (quitting) return;
+    event.preventDefault();
+    quitting = true;
+    void progress.flush().finally(() => app.quit());
+  });
   // A missing or unsupported native runtime must not prevent the game opening.
   try { ({ bindSmartSpectraIpc } = require('@smartspectra/node-sdk/main')); }
   catch { bindSmartSpectraIpc = null; }

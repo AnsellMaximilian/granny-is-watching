@@ -70,6 +70,8 @@ export function mountSmartSpectra() {
     // Do not replace aria-live text on every metrics tick or repeat SDK hints.
     if ($('status').textContent !== status) $('status').textContent = status;
     if ($('hint').textContent !== hint) $('hint').textContent = hint;
+    const cameraStatus = document.getElementById('camera-settings-status');
+    if (cameraStatus.textContent !== hint) cameraStatus.textContent = hint;
     toggle.textContent = phase === 'opening' ? 'Cancel' : stream ? 'Stop camera' : 'Enable camera';
     toggle.disabled = false;
     retry.hidden = !stream || !state.nativeAvailable || !state.hasKey || active;
@@ -156,6 +158,7 @@ export function mountSmartSpectra() {
   return {
     gameplaySignals: () => session.gameplaySignals(),
     setEncounter(value) { encounter = value; render(); },
+    setPreviewVisible(visible) { panel.hidden = !visible; },
     async ensureCamera() {
       await ready;
       if (!session.state.stream) await session.startCamera($('camera').value);
