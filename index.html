@@ -26,6 +26,11 @@
         <label id="spectra-camera-picker" class="spectra-camera-picker" hidden>Camera
           <select id="spectra-camera" aria-label="Choose camera"></select>
         </label>
+        <dl id="spectra-performance" class="camera-performance" hidden>
+          <div><dt>Camera mode</dt><dd id="spectra-mode">—</dd></div>
+          <div><dt>Preview</dt><dd id="spectra-preview-rate">— FPS</dd></div>
+          <div><dt>Tracking feed</dt><dd id="spectra-tracking-rate">Off</dd></div>
+        </dl>
         <details id="spectra-settings" class="spectra-settings" hidden>
           <summary>API key</summary>
           <form id="spectra-key-form">
@@ -57,7 +62,10 @@
         <div id="spectra-preview" class="spectra-preview" hidden>
           <video id="spectra-video" autoplay muted playsinline aria-label="Your live camera feed"></video>
           <span id="spectra-sdk-status" role="status">Tracking off</span>
-          <span id="spectra-camera-name">Live camera</span>
+          <div class="spectra-preview-footer">
+            <span id="spectra-camera-name">Live camera</span>
+            <span id="spectra-fps" title="Measured preview frame rate">— FPS</span>
+          </div>
         </div>
         <p id="spectra-status" class="spectra-status" role="status">Camera off</p>
         <p id="spectra-hint" class="spectra-hint">Enable your camera for a live preview.</p>

@@ -131,7 +131,14 @@ button:focus-visible { outline: 2px solid #ffe0a8; outline-offset: 4px; }
 .spectra-panel[data-sdk="starting"] #spectra-sdk-status,
 .spectra-panel[data-sdk="stopping"] #spectra-sdk-status,
 .spectra-panel[data-sdk="error"] #spectra-sdk-status { color: #eead69; border-color: #eead6980; }
-#spectra-camera-name { position: absolute; left: 5px; bottom: 3px; max-width: calc(100% - 10px); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; background: #110d0ac9; padding: 1px 4px; font-size: 0.63rem; }
+.spectra-preview-footer { position: absolute; left: 5px; right: 5px; bottom: 3px; display: flex; gap: 4px; align-items: center; font-size: 0.63rem; }
+#spectra-camera-name { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; background: #110d0ac9; padding: 1px 4px; }
+#spectra-fps { flex-shrink: 0; margin-left: auto; white-space: nowrap; font-variant-numeric: tabular-nums; background: #110d0ae6; color: #dbedcd; padding: 1px 4px; }
+#spectra-fps[data-quality="low"], .camera-performance dd[data-quality="low"] { color: #eead69; }
+#spectra-fps[data-quality="waiting"] { color: var(--muted); }
+.camera-performance { margin: 14px 0; color: var(--muted); font-size: 0.8rem; }
+.camera-performance > div { display: flex; justify-content: space-between; gap: 12px; margin-top: 6px; }
+.camera-performance dd { margin: 0; color: var(--text); font-variant-numeric: tabular-nums; text-align: right; }
 .spectra-status { margin: 7px 0 2px; font-weight: 600; color: var(--gold); }
 .spectra-hint { margin: 0 0 7px; color: var(--muted); font-size: 0.7rem; }
 .spectra-signals { display: grid; grid-template-columns: 1fr 1fr; gap: 7px 10px; margin: 8px 0; }

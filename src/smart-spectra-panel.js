@@ -1,5 +1,6 @@
 import { SIGNALS } from './smart-spectra-readings.js';
 import { SpectraSession } from './smart-spectra-session.js';
+import { FrameRate, watchPreviewFrames } from './frame-rate.js';
 
 async function loadSdk() {
   if (typeof MediaStreamTrackProcessor === 'undefined' || typeof OffscreenCanvas === 'undefined') {
@@ -31,6 +32,9 @@ export function mountSmartSpectra() {
   let encounter = null;
   let gameplayNeeded = false;
   let testUntil = 0;
+  const previewRate = new FrameRate();
+  const previewFrames = watchPreviewFrames(video, previewRate);
+  let rateUpdatedAt = -Infinity;
 
   for (const signal of SIGNALS) {
     const container = document.createElement('div');
@@ -55,10 +59,12 @@ export function mountSmartSpectra() {
     panel.dataset.state = phase;
     panel.dataset.sdk = state.sdkStatus;
     if (video.srcObject !== stream) {
+      previewFrames.reset();
       video.srcObject = stream;
       if (stream) video.play().catch(() => {});
     }
     $('preview').hidden = !stream;
+    $('performance').hidden = !stream;
     $('readings').hidden = !stream || !['starting', 'measuring', 'adjust'].includes(phase);
     let status = {
       off: 'Camera off', opening: 'Opening camera…', preview: 'Live preview',
@@ -107,7 +113,35 @@ export function mountSmartSpectra() {
     }
     const selected = track?.getSettings().deviceId;
     if (selected) $('camera').value = selected;
+    renderFrameRates(true);
     renderReadings();
+  }
+
+  function renderFrameRates(force = false) {
+    const { stream, phase, sdkStatus, lastTrackingFps } = session.state;
+    const visible = Boolean(stream && !panel.hidden && !$('body').hidden && !document.hidden);
+    previewFrames.setActive(visible);
+    previewFrames.poll();
+    const now = performance.now();
+    if (!force && now - rateUpdatedAt < 500) return;
+    rateUpdatedAt = now;
+    const fps = visible ? previewRate.read(now) : null;
+    const format = value => value === null ? '— FPS' : value.toFixed(1) + ' FPS';
+    const quality = value => value === null ? 'waiting' : Number(value.toFixed(1)) < 25 ? 'low' : 'live';
+    $('fps').textContent = format(fps);
+    $('fps').dataset.quality = quality(fps);
+    $('preview-rate').textContent = visible ? format(fps) : 'Hidden';
+    $('preview-rate').dataset.quality = quality(fps);
+    const settings = stream?.getVideoTracks()[0]?.getSettings() ?? {};
+    const size = settings.width && settings.height ? settings.width + ' × ' + settings.height : '';
+    const nominal = Number.isFinite(settings.frameRate) ? settings.frameRate.toFixed(1) + ' FPS' : '';
+    $('mode').textContent = [size, nominal].filter(Boolean).join(' · ') || 'Not reported';
+    const active = ['starting', 'running'].includes(sdkStatus);
+    const trackingFps = active ? session.frameRate.read() : lastTrackingFps;
+    $('tracking-rate').textContent = active ? format(trackingFps)
+      : trackingFps !== null ? 'Last: ' + format(trackingFps) : phase === 'signal-error' ? 'Unavailable' : 'Off';
+    $('tracking-rate').dataset.quality = quality(trackingFps);
+    $('fps').title = 'Measured preview frame rate. Tracking feed: ' + $('tracking-rate').textContent;
   }
 
   function renderReadings() {
@@ -173,13 +207,14 @@ export function mountSmartSpectra() {
   });
   const deviceChange = () => void session.refreshDevices();
   navigator.mediaDevices?.addEventListener('devicechange', deviceChange);
-  const timer = setInterval(() => { updateAnalysis(); renderReadings(); }, 100);
+  const timer = setInterval(() => { updateAnalysis(); renderReadings(); renderFrameRates(); }, 100);
   const focusChange = () => updateAnalysis();
   document.addEventListener('visibilitychange', focusChange);
   window.addEventListener('blur', focusChange);
   window.addEventListener('focus', focusChange);
   window.addEventListener('pagehide', () => {
     clearInterval(timer);
+    previewFrames.setActive(false);
     navigator.mediaDevices?.removeEventListener('devicechange', deviceChange);
     document.removeEventListener('visibilitychange', focusChange);
     window.removeEventListener('blur', focusChange);

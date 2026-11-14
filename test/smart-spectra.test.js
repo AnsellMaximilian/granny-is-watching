@@ -420,6 +420,38 @@ test('camera preview with a valid key stays idle until analysis is needed', asyn
   session.stopCamera();
 });
 
+test('tracking feed FPS counts rejected frames, ignores duplicate callbacks and preserves the last rate for diagnosis', async () => {
+  let time = Date.now();
+  const { session, instances } = sessionFixture({ now: () => time });
+  await session.startCamera();
+  await session.startSignals();
+  const sdk = instances[0];
+  const start = time;
+  for (let frame = 0; frame <= 30; frame++) {
+    time = start + frame * 1000 / 30;
+    sdk.send('frameSentThrough', frame % 2 === 0, time * 1000);
+    sdk.send('frameSentThrough', true, time * 1000); // Same frame, repeated.
+  }
+  assert.ok(Math.abs(session.frameRate.read() - 30) < 0.01);
+  await session.stopSignals();
+  assert.equal(session.frameRate.read(), null);
+  assert.ok(Math.abs(session.state.lastTrackingFps - 30) < 0.01);
+  sdk.send('frameSentThrough', true, (time + 1000) * 1000);
+  assert.equal(session.frameRate.read(), null, 'Late callbacks cannot revive the stopped counter');
+  await session.startSignals();
+  assert.equal(session.state.lastTrackingFps, null);
+  const resumed = time;
+  for (let frame = 0; frame <= 15; frame++) {
+    time = resumed + frame * 1000 / 15;
+    sdk.send('frameSentThrough', false, time * 1000);
+  }
+  sdk.send('error', 14, 'Low frame rate', false);
+  assert.equal(session.state.sdkStatus, 'error');
+  assert.ok(Math.abs(session.state.lastTrackingFps - 15) < 0.01);
+  session.stopCamera();
+  assert.equal(session.state.lastTrackingFps, null);
+});
+
 test('encounters reuse a stopped SDK while keeping the original camera live and clearing old signals', async () => {
   const { session, stream, instances } = sessionFixture();
   await session.startCamera();

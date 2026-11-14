@@ -1,4 +1,5 @@
 import { SignalReadings, spectraError, validationHint } from './smart-spectra-readings.js';
+import { FrameRate } from './frame-rate.js';
 
 export class SpectraSession {
   #sdk = null;
@@ -14,6 +15,8 @@ export class SpectraSession {
   #sdkStarting = false;
   #stopRequested = false;
   #signalTask = Promise.resolve();
+  #frameCount = 0;
+  #frameTimestamp = 0;
 
   constructor({ mediaDevices, loadSdk, onChange = () => {}, now = Date.now, captureTimeoutMs = 30000 }) {
     this.mediaDevices = mediaDevices;
@@ -22,8 +25,9 @@ export class SpectraSession {
     this.captureTimeoutMs = captureTimeoutMs;
     this.now = now;
     this.readings = new SignalReadings(now);
+    this.frameRate = new FrameRate({ now });
     this.state = {
-      phase: 'off', sdkStatus: 'idle', stream: null, validationCode: null, validationAt: null, devices: [],
+      phase: 'off', sdkStatus: 'idle', stream: null, validationCode: null, validationAt: null, devices: [], lastTrackingFps: null,
       nativeAvailable: false, desktop: false, packaged: false, hasKey: false, needsKey: false,
       hint: 'Enable your camera for a live preview.',
     };
@@ -56,12 +60,17 @@ export class SpectraSession {
   }
 
   #clearSignals() {
+    const fps = this.frameRate.read();
+    if (fps !== null) this.state.lastTrackingFps = fps;
     this.#signalGeneration++;
     this.#failSignals = null;
     this.#stoppedAt = null;
     this.readings.clear();
     this.state.validationCode = null;
     this.state.validationAt = null;
+    this.frameRate.reset();
+    this.#frameCount = 0;
+    this.#frameTimestamp = 0;
   }
 
   #disposeSdk() {
@@ -131,7 +140,7 @@ export class SpectraSession {
     this.#disposeSdk();
     for (const track of this.state.stream?.getTracks() ?? []) track.stop();
     Object.assign(this.state, {
-      phase: 'off', sdkStatus: 'idle', stream: null,
+      phase: 'off', sdkStatus: 'idle', stream: null, lastTrackingFps: null,
       hint: 'Enable your camera for a live preview.',
     });
     this.emit();
@@ -240,16 +249,17 @@ export class SpectraSession {
     }
     const fail = (error) => {
       if (!current()) return;
+      const lastTrackingFps = this.frameRate.read() ?? this.state.lastTrackingFps;
       this.#signalBlocked = true;
       this.#disposeSdk();
       Object.assign(this.state, {
-        phase: 'signal-error', sdkStatus: 'error', hint: spectraError(error), needsKey: error?.code === 2,
+        phase: 'signal-error', sdkStatus: 'error', hint: spectraError(error), needsKey: error?.code === 2, lastTrackingFps,
       });
       this.emit();
     };
     this.#failSignals = fail;
     this.#lastFeedbackAt = this.now();
-    Object.assign(this.state, { phase: 'starting', sdkStatus: 'starting', hint: 'Face the camera in even light.' });
+    Object.assign(this.state, { phase: 'starting', sdkStatus: 'starting', lastTrackingFps: null, hint: 'Face the camera in even light.' });
     this.emit();
     try {
       const { SmartSpectraSDK, requestedMetrics, decodeMetrics } = await this.loadSdk();
@@ -294,7 +304,16 @@ export class SpectraSession {
         try { this.readings.ingest(decodeMetrics(buffer)); }
         catch { fail({ code: 8 }); }
       });
-      sdk.on('frameSentThrough', () => { if (current()) this.#lastFeedbackAt = this.now(); });
+      sdk.on('frameSentThrough', (_sent, timestampUs) => {
+        if (!current()) return;
+        this.#lastFeedbackAt = this.now();
+        // Count both accepted and rejected frames: a missing face must not
+        // masquerade as a slow camera. Ignore duplicate/out-of-order callbacks.
+        if (Number.isFinite(timestampUs) && timestampUs > this.#frameTimestamp) {
+          this.#frameTimestamp = timestampUs;
+          this.frameRate.record(++this.#frameCount);
+        }
+      });
       sdk.on('error', (code, _message, _retryable) => fail({ code }));
       sdk.useMediaStream(this.state.stream);
       this.#sdkStarting = true;
