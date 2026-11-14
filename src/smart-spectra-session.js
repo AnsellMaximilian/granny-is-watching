@@ -8,6 +8,12 @@ export class SpectraSession {
   #failSignals = null;
   #lastFeedbackAt = 0;
   #stoppedAt = null;
+  #analysisNeeded = false;
+  #signalBlocked = false;
+  #sdkStarted = false;
+  #sdkStarting = false;
+  #stopRequested = false;
+  #signalTask = Promise.resolve();
 
   constructor({ mediaDevices, loadSdk, onChange = () => {}, now = Date.now, captureTimeoutMs = 30000 }) {
     this.mediaDevices = mediaDevices;
@@ -17,9 +23,9 @@ export class SpectraSession {
     this.now = now;
     this.readings = new SignalReadings(now);
     this.state = {
-      phase: 'off', stream: null, validationCode: null, validationAt: null, devices: [],
+      phase: 'off', sdkStatus: 'idle', stream: null, validationCode: null, validationAt: null, devices: [],
       nativeAvailable: false, desktop: false, hasKey: false, needsKey: false,
-      hint: 'Enable your camera to check facial signals.',
+      hint: 'Enable your camera for a live preview. Facial analysis runs only when needed.',
     };
   }
 
@@ -48,17 +54,63 @@ export class SpectraSession {
     };
   }
 
-  stopSignals() {
+  #clearSignals() {
     this.#signalGeneration++;
-    const sdk = this.#sdk;
-    this.#sdk = null;
     this.#failSignals = null;
     this.#stoppedAt = null;
-    try { sdk?.destroy(); } catch { /* Camera cleanup still has to run. */ }
     this.readings.clear();
     this.state.validationCode = null;
     this.state.validationAt = null;
   }
+
+  #disposeSdk() {
+    this.#clearSignals();
+    const sdk = this.#sdk;
+    this.#sdk = null;
+    this.#sdkStarted = false;
+    this.#sdkStarting = false;
+    this.#stopRequested = false;
+    try { sdk?.destroy(); } catch { /* Camera cleanup still has to run. */ }
+  }
+
+  #previewState() {
+    this.state.phase = this.state.stream ? 'preview' : 'off';
+    this.state.sdkStatus = 'idle';
+    this.state.hint = !this.state.stream ? 'Camera stopped. Enable it whenever you want a preview.'
+      : !this.state.nativeAvailable ? this.state.desktop
+        ? 'Live preview only. The native SmartSpectra runtime is unavailable. Run npm ci and restart the game.'
+        : 'Live preview only. Open the desktop game with npm start to use SmartSpectra.'
+      : !this.#key ? 'Live preview ready. Enter your SmartSpectra API key in Settings to detect signals.'
+      : 'Live preview only. SDK idle until a facial encounter or a 15-second signal test.';
+    this.emit();
+  }
+
+  // Serializing clean stop/start keeps one native graph and prevents overlapping
+  // sessions when a player chooses a pit or opens Settings during startup.
+  #syncSignals() {
+    this.#signalTask = this.#signalTask.then(() => this.#updateSignals());
+    return this.#signalTask;
+  }
+
+  setAnalysisNeeded(needed) {
+    needed = Boolean(needed);
+    if (needed === this.#analysisNeeded) return this.#signalTask;
+    this.#analysisNeeded = needed;
+    if (!needed) {
+      this.#clearSignals();
+      // A pending start must not turn on the frame pump after its choice ended.
+      // Cancel it rather than waiting through the SDK's full startup timeout.
+      if (this.#sdkStarting) this.#disposeSdk();
+      if (this.#sdkStarted || this.#stopRequested) {
+        this.#stopRequested = true;
+        Object.assign(this.state, { phase: 'stopping', sdkStatus: 'stopping', hint: 'Stopping facial analysis. Your camera preview stays on.' });
+        this.emit();
+      } else if (!this.#signalBlocked) this.#previewState();
+    }
+    return this.#syncSignals();
+  }
+
+  stopSignals() { return this.setAnalysisNeeded(false); }
 
   poll() {
     if (!this.#failSignals) return;
@@ -71,10 +123,12 @@ export class SpectraSession {
 
   stopCamera() {
     this.#cameraGeneration++;
-    this.stopSignals();
+    this.#analysisNeeded = false;
+    this.#signalBlocked = false;
+    this.#disposeSdk();
     for (const track of this.state.stream?.getTracks() ?? []) track.stop();
     Object.assign(this.state, {
-      phase: 'off', stream: null,
+      phase: 'off', sdkStatus: 'idle', stream: null,
       hint: 'Camera stopped. Enable it whenever you want to check the signals.',
     });
     this.emit();
@@ -121,16 +175,15 @@ export class SpectraSession {
         throw { code: 'CAMERA_ENDED' };
       }
       this.state.stream = stream;
-      this.state.phase = 'preview';
       track.addEventListener('ended', () => {
         if (generation !== this.#cameraGeneration) return;
         this.stopCamera();
         Object.assign(this.state, { phase: 'camera-error', hint: spectraError({ code: 'CAMERA_ENDED' }) });
         this.emit();
       }, { once: true });
-      this.emit();
+      this.#previewState();
       void this.refreshDevices();
-      await this.startSignals();
+      await this.#syncSignals();
     } catch (error) {
       if (generation !== this.#cameraGeneration) return;
       this.stopCamera();
@@ -144,44 +197,61 @@ export class SpectraSession {
     this.#key = key.trim().slice(0, 1024);
     this.state.hasKey = true;
     this.state.needsKey = false;
-    if (this.state.stream) await this.startSignals();
-    else {
-      this.state.hint = 'Key ready for this session. Enable your camera to measure.';
-      this.emit();
-    }
+    this.#signalBlocked = false;
+    this.#disposeSdk();
+    this.#previewState();
+    await this.#syncSignals();
   }
 
+  // Explicit retry only. Automatic demand changes never retry a rejected key,
+  // exhausted credits or a failed runtime on every turn/frame.
   async startSignals() {
-    if (!this.state.stream) return;
-    this.stopSignals();
+    this.#signalBlocked = false;
+    this.#analysisNeeded = true;
+    await this.#syncSignals();
+  }
+
+  async #updateSignals() {
+    if (!this.#analysisNeeded || !this.state.stream || this.#stopRequested) {
+      if (this.#sdkStarted) {
+        const sdk = this.#sdk;
+        this.#clearSignals();
+        this.#sdkStarted = false;
+        try { await sdk.stop(); }
+        catch {
+          if (sdk === this.#sdk) this.#disposeSdk();
+        }
+        if (sdk !== this.#sdk) return;
+      }
+      this.#stopRequested = false;
+      if (!this.#signalBlocked) this.#previewState();
+      if (!this.#analysisNeeded || !this.state.stream) return;
+    }
+    if (this.#signalBlocked || this.#sdkStarted) return;
+    this.#clearSignals();
     const generation = this.#signalGeneration;
-    const current = () => generation === this.#signalGeneration;
+    const current = () => generation === this.#signalGeneration && this.#analysisNeeded;
     if (!this.state.nativeAvailable || !this.#key) {
-      this.state.phase = 'preview';
-      this.state.hint = !this.state.nativeAvailable
-        ? this.state.desktop
-          ? 'Live preview only. The native SmartSpectra runtime is unavailable. Run npm ci and restart the game.'
-          : 'Live preview only. Open the desktop game with npm start to use SmartSpectra.'
-        : 'Live preview ready. Enter your SmartSpectra API key in Settings to detect signals.';
-      this.emit();
+      this.#previewState();
       return;
     }
     const fail = (error) => {
       if (!current()) return;
-      this.stopSignals();
+      this.#signalBlocked = true;
+      this.#disposeSdk();
       Object.assign(this.state, {
-        phase: 'signal-error', hint: spectraError(error), needsKey: error?.code === 2,
+        phase: 'signal-error', sdkStatus: 'error', hint: spectraError(error), needsKey: error?.code === 2,
       });
       this.emit();
     };
     this.#failSignals = fail;
     this.#lastFeedbackAt = this.now();
-    Object.assign(this.state, { phase: 'starting', hint: 'Starting facial analysis. Keep your face visible and well lit.' });
+    Object.assign(this.state, { phase: 'starting', sdkStatus: 'starting', hint: 'Starting facial analysis. Keep your face visible and well lit.' });
     this.emit();
     try {
       const { SmartSpectraSDK, requestedMetrics, decodeMetrics } = await this.loadSdk();
       if (!current()) return;
-      const sdk = new SmartSpectraSDK({
+      const sdk = this.#sdk ?? new SmartSpectraSDK({
         apiKey: this.#key, requestedMetrics,
         enableTelemetry: false, enableAccumulatedOutput: false, sendTimeoutMs: 30000,
       });
@@ -191,6 +261,7 @@ export class SpectraSession {
         this.#lastFeedbackAt = this.now();
         if (status === 5 || (status === 1 && this.readings.startedAt !== null)) this.#stoppedAt = this.now();
         if (status === 3) {
+          this.state.sdkStatus = 'running';
           this.#stoppedAt = null;
           if (this.readings.startedAt === null) this.readings.start();
           this.state.phase = this.state.validationCode === null || this.state.validationCode === 0 ? 'measuring' : 'adjust';
@@ -202,6 +273,7 @@ export class SpectraSession {
         if (!current()) return;
         this.#lastFeedbackAt = this.now();
         this.state.validationAt = this.now();
+        this.state.sdkStatus = 'running';
         if (this.readings.startedAt === null) this.readings.start();
         if (code === 1 || code === 2) this.readings.invalidateFace();
         // Chest framing is irrelevant to the requested facial metrics.
@@ -222,7 +294,12 @@ export class SpectraSession {
       sdk.on('frameSentThrough', () => { if (current()) this.#lastFeedbackAt = this.now(); });
       sdk.on('error', (code, _message, _retryable) => fail({ code }));
       sdk.useMediaStream(this.state.stream);
+      this.#sdkStarting = true;
       await sdk.start();
+      if (current()) {
+        this.#sdkStarting = false;
+        this.#sdkStarted = true;
+      }
     } catch (error) { fail(error); }
   }
 }

@@ -233,7 +233,10 @@ async function launch() {
   }
 
   function updateFacialHurdles(deltaMs) {
-    if (phase !== 'game' && phase !== 'facial-happy') return;
+    if (phase !== 'game' && phase !== 'facial-happy') {
+      spectra.setAnalysisNeeded(false);
+      return;
+    }
     const signals = spectra.gameplaySignals();
     const focused = !document.hidden && document.hasFocus()
       && !settingsDialog.open
@@ -253,11 +256,13 @@ async function launch() {
     if (event === 'happy-pass') returnFromHappy();
     if (event === 'happy-fail') startStare({ close: true, reason: 'Granny did not believe your smile.' });
     if (event === 'away-penalty') void applyAwayPenalty();
+    spectra.setAnalysisNeeded(focused && hurdles.needsSignals
+      && (phase === 'facial-happy' || (phase === 'game' && !busy && game.turn === PLAYER && !game.outcome)));
     if (hurdles.active === 'away') {
       if (!busy) {
         const hint = !focused ? pausedHint
-          : !signals.healthy || signals.facing === null ? 'Tracking paused. Reconnect the camera, or switch facial hurdles off.'
           : hurdles.awayPenalized ? 'She has taken her due. Choose a pit to send her away.'
+          : !signals.healthy || signals.facing === null ? 'Tracking paused. Reconnect the camera, or switch facial hurdles off.'
           : 'Look away from the camera while choosing an occupied pit on your side.';
         status(hurdles.awayPenalized ? 'Granny has taken her harvest' : ['Do not look at her', 'She can see you looking', 'Look away, child'][hurdles.stage], hint);
       }
@@ -281,6 +286,7 @@ async function launch() {
     hurdles.setEnabled(enabled);
     if (enabled && startCamera) void spectra.ensureCamera();
     if (!enabled) {
+      spectra.setAnalysisNeeded(false);
       sound.stopThreat();
       upsideDown.dismiss(performance.now());
       match.classList.remove('away-encounter');
@@ -321,6 +327,7 @@ async function launch() {
 
   settingsButton.addEventListener('click', () => {
     if (!settingsDialog.open) settingsDialog.showModal();
+    spectra.setAnalysisNeeded(false);
     sound.stopThreat();
     updateProgressUI();
   });
@@ -455,6 +462,7 @@ async function launch() {
     if (rulebookButton.disabled || match.hidden) return;
     resumePhase = phase;
     phase = 'book';
+    spectra.setAnalysisNeeded(false);
     readerBusy = true;
     match.hidden = true;
     updatePitButtons();
@@ -729,6 +737,7 @@ async function launch() {
   async function selectPit(pit) {
     if (phase !== 'game' || busy || game.turn !== PLAYER || !legalPits(game).includes(pit)) return;
     busy = true;
+    spectra.setAnalysisNeeded(false);
     upsideDown.dismiss(performance.now());
     match.classList.remove('away-encounter');
     sound.stopThreat();

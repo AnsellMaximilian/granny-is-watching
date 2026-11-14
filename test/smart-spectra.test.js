@@ -221,7 +221,12 @@ function sessionFixture({ getUserMedia, loadSdk, captureTimeoutMs, now } = {}) {
     constructor(options) { this.options = options; this.listeners = new Map(); instances.push(this); }
     on(name, callback) { this.listeners.set(name, callback); }
     useMediaStream(input) { this.stream = input; }
-    async start() { this.listeners.get('processingStatus')(3); this.listeners.get('validationStatus')(0, 0, ''); }
+    async start() {
+      this.starts = (this.starts ?? 0) + 1;
+      this.listeners.get('processingStatus')(3);
+      this.listeners.get('validationStatus')(0, 0, '');
+    }
+    async stop() { this.stops = (this.stops ?? 0) + 1; this.send('processingStatus', 1); }
     destroy() { this.destroyed = true; }
     send(name, ...args) { this.listeners.get(name)?.(...args); }
   }
@@ -243,6 +248,9 @@ test('a missing key or native runtime preserves a working preview without starti
   assert.match(session.state.hint, /API key/);
   assert.equal(instances.length, 0);
   await session.setKey('replacement-key');
+  assert.equal(session.state.phase, 'preview', 'Entering a key alone does not spend analysis time');
+  assert.equal(instances.length, 0);
+  await session.startSignals();
   assert.equal(session.state.phase, 'measuring');
   assert.equal(instances.length, 1);
   assert.equal(instances[0].options.enableTelemetry, false);
@@ -284,6 +292,7 @@ test('browser or missing-native fallback keeps the preview usable without loadin
     const { session, stream, instances } = sessionFixture();
     session.configure({ desktop, nativeAvailable: false, apiKey: 'test-local-key' });
     await session.startCamera();
+    await session.startSignals();
     assert.equal(session.state.phase, 'preview');
     assert.equal(session.state.stream, stream);
     assert.equal(instances.length, 0);
@@ -295,6 +304,7 @@ test('browser or missing-native fallback keeps the preview usable without loadin
 test('disconnects release the native session and late callbacks cannot revive it', async () => {
   const { session, stream, instances } = sessionFixture();
   await session.startCamera();
+  await session.startSignals();
   stream.track.dispatchEvent(new Event('ended'));
   assert.equal(session.state.phase, 'camera-error');
   assert.ok(instances[0].destroyed);
@@ -306,6 +316,7 @@ test('disconnects release the native session and late callbacks cannot revive it
 test('losing the face clears detections and chest-only feedback does not block facial analysis', async () => {
   const { session, instances } = sessionFixture();
   await session.startCamera();
+  await session.startSignals();
   instances[0].send('metrics', { face: { talking: [{ timestamp: Date.now() * 1000, stable: true, detected: true }] } });
   assert.equal(session.readings.snapshot().find((reading) => reading.id === 'talking').value, 'Detected');
   instances[0].send('validationStatus', 1, 0, 'No face found.');
@@ -321,6 +332,7 @@ test('losing the face clears detections and chest-only feedback does not block f
 test('fatal low-frame-rate errors keep the preview, clear signals and require a manual retry', async () => {
   const { session, instances } = sessionFixture();
   await session.startCamera();
+  await session.startSignals();
   instances[0].send('error', 14, 'native internal error', true);
   assert.equal(session.state.phase, 'signal-error');
   assert.ok(session.state.stream);
@@ -335,7 +347,8 @@ test('fatal low-frame-rate errors keep the preview, clear signals and require a 
 test('stopping while the renderer module loads prevents a late SDK instance from starting', async () => {
   const loading = deferred();
   const { session, stream, instances, FakeSdk } = sessionFixture({ loadSdk: () => loading.promise });
-  const starting = session.startCamera();
+  await session.startCamera();
+  const starting = session.startSignals();
   await Promise.resolve();
   await Promise.resolve();
   session.stopCamera();
@@ -351,6 +364,7 @@ test('silent processing stops and missing heartbeats become recoverable signal e
     let time = Date.now();
     const { session, instances } = sessionFixture({ now: () => time });
     await session.startCamera();
+    await session.startSignals();
     if (stopped) instances[0].send('processingStatus', 5);
     time += stopped ? 1001 : 35001;
     session.poll();
@@ -375,8 +389,126 @@ test('a malformed protobuf packet is contained without losing the preview or thr
     }),
   });
   await session.startCamera();
+  await session.startSignals();
   assert.equal(session.state.phase, 'signal-error');
   assert.ok(session.state.stream);
   assert.equal(instances.length, 0);
+  session.stopCamera();
+});
+
+test('camera preview with a valid key stays idle until analysis is needed', async () => {
+  const { session, stream, instances } = sessionFixture();
+  await session.startCamera();
+  assert.equal(session.state.stream, stream);
+  assert.equal(session.state.phase, 'preview');
+  assert.equal(session.state.sdkStatus, 'idle');
+  assert.equal(instances.length, 0);
+  assert.equal(session.gameplaySignals().healthy, false);
+  session.stopCamera();
+});
+
+test('encounters reuse a stopped SDK while keeping the original camera live and clearing old signals', async () => {
+  const { session, stream, instances } = sessionFixture();
+  await session.startCamera();
+  await Promise.all(Array.from({ length: 20 }, () => session.setAnalysisNeeded(true)));
+  assert.equal(instances.length, 1);
+  const sdk = instances[0];
+  assert.equal(sdk.starts, 1);
+  assert.equal(session.state.sdkStatus, 'running');
+  sdk.send('metrics', { face: { expression: [{ timestamp: Date.now() * 1000, stable: true, scores: [{ type: 5, confidence: 90 }] }] } });
+  assert.equal(session.gameplaySignals().expression.type, 5);
+  const lateValidation = sdk.listeners.get('validationStatus');
+  const lateMetrics = sdk.listeners.get('metrics');
+  const stopping = session.stopSignals();
+  assert.equal(session.gameplaySignals().expression, null, 'Stopped analysis is unavailable immediately');
+  await stopping;
+  lateValidation(0, 0, 'Late validation');
+  lateMetrics({ face: { talking: [{ timestamp: Date.now() * 1000, stable: true, detected: true }] } });
+  assert.equal(session.state.sdkStatus, 'idle');
+  assert.equal(session.state.phase, 'preview');
+  assert.equal(session.readings.samples.size, 0);
+  assert.equal(sdk.stops, 1);
+  assert.ok(!sdk.destroyed, 'A clean stop retains the graph');
+  assert.equal(stream.track.readyState, 'live');
+  await session.setAnalysisNeeded(true);
+  assert.equal(instances.length, 1);
+  assert.equal(sdk.starts, 2);
+  assert.equal(session.gameplaySignals().expression, null, 'A new encounter cannot inherit the old smile');
+  session.stopCamera();
+  assert.ok(sdk.destroyed);
+  assert.equal(stream.track.readyState, 'ended');
+});
+
+test('an encounter ending during SDK startup cancels analysis without stopping its preview', async () => {
+  const starting = deferred();
+  const { session, stream, instances, FakeSdk } = sessionFixture();
+  FakeSdk.prototype.start = () => starting.promise;
+  await session.startCamera();
+  const demand = session.setAnalysisNeeded(true);
+  for (let i = 0; i < 10 && instances.length === 0; i++) await Promise.resolve();
+  assert.equal(instances.length, 1);
+  const stopped = session.setAnalysisNeeded(false);
+  assert.ok(instances[0].destroyed);
+  instances[0].send('validationStatus', 0, 0, 'Late startup');
+  starting.resolve();
+  await Promise.all([demand, stopped]);
+  assert.equal(session.state.sdkStatus, 'idle');
+  assert.equal(session.state.phase, 'preview');
+  assert.equal(session.gameplaySignals().healthy, false);
+  assert.equal(stream.track.readyState, 'live');
+  session.stopCamera();
+});
+
+test('a new encounter waits for the previous asynchronous stop before restarting', async () => {
+  const draining = deferred();
+  const { session, instances, FakeSdk } = sessionFixture();
+  FakeSdk.prototype.stop = () => draining.promise;
+  await session.startCamera();
+  await session.setAnalysisNeeded(true);
+  const stopping = session.setAnalysisNeeded(false);
+  await Promise.resolve();
+  const restarting = session.setAnalysisNeeded(true);
+  await Promise.resolve();
+  assert.equal(instances[0].starts, 1);
+  draining.resolve();
+  await Promise.all([stopping, restarting]);
+  assert.equal(instances.length, 1);
+  assert.equal(instances[0].starts, 2);
+  assert.equal(session.state.sdkStatus, 'running');
+  session.stopCamera();
+});
+
+test('a pause and resume in the same task cannot leave analysis running with invalidated callbacks', async () => {
+  const { session, instances } = sessionFixture();
+  await session.startCamera();
+  await session.setAnalysisNeeded(true);
+  const stopping = session.setAnalysisNeeded(false);
+  const restarting = session.setAnalysisNeeded(true);
+  await Promise.all([stopping, restarting]);
+  assert.equal(instances.length, 1);
+  assert.equal(instances[0].stops, 1);
+  assert.equal(instances[0].starts, 2);
+  assert.equal(session.state.sdkStatus, 'running');
+  instances[0].send('validationStatus', 1, 0, 'No face');
+  assert.equal(session.gameplaySignals().facing, false);
+  session.stopCamera();
+});
+
+test('credit failures stay blocked across automatic encounter requests until a deliberate retry', async () => {
+  const { session, stream, instances } = sessionFixture();
+  await session.startCamera();
+  await session.setAnalysisNeeded(true);
+  instances[0].send('error', 4, 'Credit exhausted', false);
+  assert.equal(session.state.sdkStatus, 'error');
+  for (let i = 0; i < 5; i++) {
+    await session.setAnalysisNeeded(false);
+    await session.setAnalysisNeeded(true);
+  }
+  assert.equal(instances.length, 1);
+  assert.equal(session.state.phase, 'signal-error');
+  assert.equal(stream.track.readyState, 'live');
+  await session.startSignals();
+  assert.equal(instances.length, 2);
+  assert.equal(session.state.sdkStatus, 'running');
   session.stopCamera();
 });

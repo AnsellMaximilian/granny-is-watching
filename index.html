@@ -21,7 +21,7 @@
       <p id="save-status" class="settings-status" role="status"></p>
       <div class="camera-settings">
         <h3>Camera</h3>
-        <label class="setting-row"><span>Show camera preview<small>Hiding it keeps facial analysis running.</small></span><input id="setting-camera" type="checkbox" checked /></label>
+        <label class="setting-row"><span>Show camera preview<small>Facial analysis runs only when an encounter needs it.</small></span><input id="setting-camera" type="checkbox" checked /></label>
         <p id="camera-settings-status" class="settings-status" role="status"></p>
         <label id="spectra-camera-picker" class="spectra-camera-picker" hidden>Camera
           <select id="spectra-camera" aria-label="Choose camera"></select>
@@ -56,10 +56,11 @@
       <div id="spectra-body">
         <div id="spectra-preview" class="spectra-preview" hidden>
           <video id="spectra-video" autoplay muted playsinline aria-label="Your live camera feed"></video>
+          <span id="spectra-sdk-status" role="status">SDK idle</span>
           <span id="spectra-camera-name">Live camera</span>
         </div>
         <p id="spectra-status" class="spectra-status" role="status">Camera off</p>
-        <p id="spectra-hint" class="spectra-hint">Enable your camera to check facial signals.</p>
+        <p id="spectra-hint" class="spectra-hint">Enable your camera for a live preview. Facial analysis runs only when needed.</p>
         <div id="spectra-readings" hidden>
           <dl id="spectra-primary" class="spectra-signals"></dl>
         </div>

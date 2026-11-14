@@ -29,6 +29,8 @@ export function mountSmartSpectra() {
   const fields = new Map();
   let promptedForKey = false;
   let encounter = null;
+  let gameplayNeeded = false;
+  let testUntil = 0;
 
   for (const signal of SIGNALS) {
     const container = document.createElement('div');
@@ -50,8 +52,8 @@ export function mountSmartSpectra() {
     const state = session.state;
     const { phase, stream } = state;
     let hint = state.hint;
-    const active = ['starting', 'measuring', 'adjust'].includes(phase);
     panel.dataset.state = phase;
+    panel.dataset.sdk = state.sdkStatus;
     if (video.srcObject !== stream) {
       video.srcObject = stream;
       if (stream) video.play().catch(() => {});
@@ -59,8 +61,9 @@ export function mountSmartSpectra() {
     $('preview').hidden = !stream;
     $('readings').hidden = !stream;
     let status = {
-      off: 'Camera off', opening: 'Opening camera…', preview: 'Camera ready',
+      off: 'Camera off', opening: 'Opening camera…', preview: 'Live preview',
       starting: 'Starting signals…', measuring: 'Measuring', adjust: 'Adjust camera',
+      stopping: 'Stopping signals…',
       'camera-error': 'Camera unavailable', 'signal-error': 'Signals unavailable',
     }[phase];
     if (encounter === 'away' && ['measuring', 'adjust'].includes(phase)) {
@@ -70,11 +73,18 @@ export function mountSmartSpectra() {
     // Do not replace aria-live text on every metrics tick or repeat SDK hints.
     if ($('status').textContent !== status) $('status').textContent = status;
     if ($('hint').textContent !== hint) $('hint').textContent = hint;
+    const sdkLabel = {
+      idle: 'SDK idle', starting: 'SDK starting…', running: 'SDK running',
+      stopping: 'SDK stopping…', error: 'SDK error',
+    }[state.sdkStatus];
+    if ($('sdk-status').textContent !== sdkLabel) $('sdk-status').textContent = sdkLabel;
     const cameraStatus = document.getElementById('camera-settings-status');
     if (cameraStatus.textContent !== hint) cameraStatus.textContent = hint;
     toggle.textContent = phase === 'opening' ? 'Cancel' : stream ? 'Stop camera' : 'Enable camera';
     toggle.disabled = false;
-    retry.hidden = !stream || !state.nativeAvailable || !state.hasKey || active;
+    retry.hidden = !stream || !state.nativeAvailable || !state.hasKey;
+    retry.textContent = testUntil > Date.now() ? 'Stop signal test'
+      : phase === 'signal-error' ? 'Retry signals · 15s' : 'Test signals · 15s';
     settings.hidden = !state.nativeAvailable;
     if (state.needsKey && stream && !promptedForKey) {
       settings.open = true;
@@ -101,19 +111,41 @@ export function mountSmartSpectra() {
   function renderReadings() {
     session.poll();
     const { phase, validationCode, validationAt } = session.state;
-    for (const sample of session.readings.snapshot({ active: ['starting', 'measuring', 'adjust'].includes(phase), validationCode, validationAt })) {
+    const active = ['starting', 'measuring', 'adjust'].includes(phase);
+    for (const sample of session.readings.snapshot({ active, validationCode, validationAt })) {
       const field = fields.get(sample.id);
       field.value.textContent = sample.value;
-      field.detail.textContent = sample.detail;
+      field.detail.textContent = !active && session.state.stream && phase === 'preview' ? 'SDK idle' : sample.detail;
       field.reading.dataset.quality = sample.quality;
     }
   }
 
+  function updateAnalysis() {
+    if (testUntil && (Date.now() >= testUntil || !session.state.stream)) {
+      testUntil = 0;
+      render();
+    }
+    const focused = !document.hidden && document.hasFocus();
+    void session.setAnalysisNeeded(focused && (gameplayNeeded || testUntil > Date.now()));
+  }
+
   toggle.addEventListener('click', () => {
-    if (session.state.stream || session.state.phase === 'opening') session.stopCamera();
+    if (session.state.stream || session.state.phase === 'opening') {
+      testUntil = 0;
+      session.stopCamera();
+    }
     else void session.startCamera($('camera').value);
   });
-  retry.addEventListener('click', () => void session.startSignals());
+  retry.addEventListener('click', () => {
+    if (testUntil > Date.now()) {
+      testUntil = 0;
+      updateAnalysis();
+    } else {
+      testUntil = Date.now() + 15000;
+      void session.startSignals();
+    }
+    render();
+  });
   $('camera').addEventListener('change', () => {
     const id = $('camera').value;
     session.stopCamera();
@@ -138,10 +170,17 @@ export function mountSmartSpectra() {
   });
   const deviceChange = () => void session.refreshDevices();
   navigator.mediaDevices?.addEventListener('devicechange', deviceChange);
-  const timer = setInterval(renderReadings, 100);
+  const timer = setInterval(() => { updateAnalysis(); renderReadings(); }, 100);
+  const focusChange = () => updateAnalysis();
+  document.addEventListener('visibilitychange', focusChange);
+  window.addEventListener('blur', focusChange);
+  window.addEventListener('focus', focusChange);
   window.addEventListener('pagehide', () => {
     clearInterval(timer);
     navigator.mediaDevices?.removeEventListener('devicechange', deviceChange);
+    document.removeEventListener('visibilitychange', focusChange);
+    window.removeEventListener('blur', focusChange);
+    window.removeEventListener('focus', focusChange);
     session.stopCamera();
   }, { once: true });
 
@@ -157,6 +196,7 @@ export function mountSmartSpectra() {
   }
   return {
     gameplaySignals: () => session.gameplaySignals(),
+    setAnalysisNeeded(needed) { gameplayNeeded = needed; updateAnalysis(); },
     setEncounter(value) { encounter = value; render(); },
     setPreviewVisible(visible) { panel.hidden = !visible; },
     async ensureCamera() {

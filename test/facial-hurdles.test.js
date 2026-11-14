@@ -112,15 +112,34 @@ test('random visits are rolled once per eligible choice and wait for their rando
   assert.equal(hurdles.active, null);
 });
 
-test('away visits need fresh direction data and can occur without an expression classification', () => {
+test('away visits schedule with the SDK off, but wait for fresh direction before appearing', () => {
   let calls = 0;
   const hurdles = new FacialHurdles({ random: () => { calls++; return 0; } });
   hurdles.setEnabled(true);
   for (let i = 0; i < 100; i++) hurdles.step(100, { choosing: true, facing: null, expression: null });
-  assert.equal(calls, 0);
-  for (let i = 0; i < 14; i++) assert.equal(hurdles.step(100, { choosing: true, facing: false }), null);
+  assert.equal(calls, 2);
+  assert.equal(hurdles.needsSignals, true);
+  assert.equal(hurdles.active, null);
+  assert.equal(hurdles.pressure, 0);
   assert.equal(hurdles.step(100, { choosing: true, facing: false }), 'away-start');
   assert.equal(calls, 2);
+});
+
+test('smile preparation starts after two seconds without data and never punishes SDK startup', () => {
+  const { hurdles, advance } = fixture();
+  advance(1900, { expression: null });
+  assert.equal(hurdles.needsSignals, false);
+  advance(100, { expression: null });
+  assert.equal(hurdles.needsSignals, true);
+  advance(10000, { expression: null });
+  assert.equal(hurdles.active, null);
+  assert.equal(hurdles.pressure, 0);
+  assert.deepEqual(advance(100), ['happy-start']);
+  assert.equal(hurdles.pressure, 0);
+  assert.deepEqual(advance(900, { expression: happy }), ['happy-pass']);
+  assert.equal(hurdles.needsSignals, false);
+  hurdles.resetChoice();
+  assert.equal(hurdles.needsSignals, false, 'Choosing cancels pending preparation');
 });
 
 test('looking toward upside-down Granny has grace and tolerance before a single theft per appearance', () => {
@@ -138,5 +157,6 @@ test('looking toward upside-down Granny has grace and tolerance before a single 
   assert.deepEqual(advance(5500, { facing: true }), ['away-penalty']);
   assert.equal(hurdles.active, 'away', 'She stays after the penalty until a pit is chosen');
   assert.equal(hurdles.awayPenalized, true);
+  assert.equal(hurdles.needsSignals, false, 'No more analysis is needed after the single theft');
   assert.deepEqual(advance(20000, { facing: true }), []);
 });

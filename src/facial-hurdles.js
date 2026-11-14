@@ -1,8 +1,8 @@
-export const HAPPY_RULES = Object.freeze({ chooseMs: 5000, graceMs: 1500, angerMs: 8000, holdMs: 900 });
+export const HAPPY_RULES = Object.freeze({ prepareMs: 2000, chooseMs: 5000, graceMs: 1500, angerMs: 8000, holdMs: 900 });
 export const AWAY_RULES = Object.freeze({ graceMs: 1500, angerMs: 6000, chance: 0.3, delayMinMs: 1500, delayMaxMs: 3500 });
 
-// Timing runs only while the game is foregrounded and the current signal is
-// reliable. This state stays independent of DOM text, scene poses and scores.
+// Scheduling does not depend on facial signals: the SDK stays stopped until
+// a possible encounter needs it. Encounters and pressure require fresh data.
 export class FacialHurdles {
   constructor({ random = Math.random } = {}) {
     this.random = random;
@@ -18,7 +18,6 @@ export class FacialHurdles {
     this.happyMs = 0;
     this.encounterMs = 0;
     this.awayPenalized = false;
-    this.awayChoiceMs = 0;
     this.awayPlanned = false;
     this.awayAt = null;
   }
@@ -40,6 +39,12 @@ export class FacialHurdles {
   get pressure() { return Math.min(1, this.angerMs / (this.active === 'away' ? AWAY_RULES.angerMs : HAPPY_RULES.angerMs)); }
   get stage() { return Math.min(2, Math.floor(this.pressure * 3)); }
 
+  get needsSignals() {
+    if (!this.enabled || this.resolved || this.active === 'failed' || this.awayPenalized) return false;
+    return this.active !== null || this.choiceMs >= HAPPY_RULES.prepareMs
+      || (this.awayAt !== null && this.choiceMs >= Math.max(0, this.awayAt - HAPPY_RULES.prepareMs));
+  }
+
   step(deltaMs, { choosing = false, focused = true, expression = null, facing = null } = {}) {
     if (!this.enabled || !focused) return null;
     const dt = Math.max(0, Math.min(100, deltaMs));
@@ -54,22 +59,22 @@ export class FacialHurdles {
       }
       return null;
     }
-    if (this.active === null && choosing && !this.resolved && typeof facing === 'boolean') {
+    if (this.active === null && choosing && !this.resolved) {
       if (!this.awayPlanned) {
         this.awayPlanned = true;
         if (this.random() < AWAY_RULES.chance) {
           this.awayAt = AWAY_RULES.delayMinMs + this.random() * (AWAY_RULES.delayMaxMs - AWAY_RULES.delayMinMs);
         }
       }
-      this.awayChoiceMs += dt;
-      if (this.awayAt !== null && this.awayChoiceMs >= this.awayAt && this.activateAway(true)) return 'away-start';
+      this.choiceMs += dt;
+      if (this.awayAt !== null && this.choiceMs >= this.awayAt
+        && typeof facing === 'boolean' && this.activateAway(true)) return 'away-start';
     }
     if (!expression || !Number.isInteger(expression.type)
       || expression.type < 1 || expression.type > 8 || !Number.isFinite(expression.confidence)
       || expression.confidence < 45 || expression.confidence > 100) return null;
     if (this.active === null) {
       if (!choosing || this.resolved) return null;
-      this.choiceMs += dt;
       if (this.choiceMs < HAPPY_RULES.chooseMs) return null;
       this.active = 'happy';
       return 'happy-start';
