@@ -1,11 +1,26 @@
 import assert from 'node:assert/strict';
-import { spawn, spawnSync } from 'node:child_process';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { spawn } from 'node:child_process';
+import { access, cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
+import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 assert.equal(process.platform, 'win32', 'The packaged smoke test currently targets Windows.');
-const directory = path.resolve(process.argv[2] ?? 'release/win-unpacked');
+let directory = path.resolve(process.argv[2] ?? 'release/win-unpacked');
+await access(path.join(directory, 'Granny is Watching.exe'));
+await access(path.join(directory, 'resources/app.asar'));
+const checkout = path.resolve(fileURLToPath(new URL('../', import.meta.url)));
+const copyPrefix = path.join(path.resolve(os.tmpdir()), 'granny-package-smoke-');
+let isolatedCopy;
+// CI extracts to RUNNER_TEMP already. Local smoke tests also leave the checkout
+// so a missing packaged runtime can never resolve a developer's node_modules.
+if (directory.toLowerCase().startsWith(checkout.toLowerCase() + path.sep)) {
+  isolatedCopy = await mkdtemp(copyPrefix);
+  const destination = path.join(isolatedCopy, 'game');
+  await cp(directory, destination, { recursive: true });
+  directory = destination;
+}
 const profile = path.resolve('release/smoke-profile-' + Date.now());
 await mkdir(profile, { recursive: true });
 const server = createServer();
@@ -16,6 +31,7 @@ const environment = { ...process.env };
 delete environment.ELECTRON_RUN_AS_NODE;
 delete environment.SMARTSPECTRA_API_KEY;
 delete environment.SMARTSPECTRA_CAPI_PATH;
+delete environment.NODE_PATH;
 const run = spawn(path.join(directory, 'Granny is Watching.exe'), [
   '--remote-debugging-address=127.0.0.1', '--remote-debugging-port=' + port,
   '--user-data-dir=' + profile, '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
@@ -88,11 +104,6 @@ try {
   await until('Boolean(document.querySelector("#wake:enabled"))');
   const config = await evaluate('window.grannySpectra.getConfig().then(c=>({packaged:c.packaged,nativeAvailable:c.nativeAvailable,hasKey:Boolean(c.apiKey)}))');
   assert.deepEqual(config, { packaged: true, nativeAvailable: true, hasKey: false }, 'The bundle must load its own native runtime without shipping an API key.');
-  const nativeModule = spawnSync('powershell.exe', ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command',
-    `(Get-Process -Id ${run.pid} -ErrorAction Stop).Modules | Where-Object ModuleName -eq 'smartspectra_capi.dll' | ForEach-Object FileName`,
-  ], { encoding: 'utf8', timeout: 10000, windowsHide: true });
-  assert.equal(nativeModule.status, 0, 'Could not inspect the loaded native DLL.');
-  assert.equal(path.normalize(nativeModule.stdout.trim()).toLowerCase(), path.join(directory, 'resources/node_modules/@smartspectra/node-sdk-win32-x64/smartspectra_capi.dll').toLowerCase(), 'The EXE must load its bundled SDK, without falling back to the source checkout.');
   assert.equal(await evaluate('typeof window.require'), 'undefined');
   const progress = {
     version: 1, settings: { sound: false, facialHurdles: false, saveProgress: true, showCamera: true },
@@ -128,4 +139,9 @@ try {
   ws?.close();
   run.kill();
   await writeFile('release/packaged-smoke.log', logs);
+  if (isolatedCopy) {
+    assert.ok(path.resolve(isolatedCopy).startsWith(copyPrefix), 'Only remove the temporary application copy.');
+    await Promise.race([exited, delay(3000)]);
+    await rm(isolatedCopy, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  }
 }

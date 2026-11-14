@@ -41,7 +41,7 @@ The workflow creates a draft and leaves publishing to you. It never replaces a p
 5. Check the opening, a full round, burns/endings, retrying a saved round, sound, and optional facial hurdles with your own key. The automated smoke test checks loading, native binding, the board, the rulebook, local saves, and shutdown; it does not start a camera or spend SDK credits.
 6. When satisfied, edit the draft and select **Publish release**. Everyone allowed to access the repository can then download its release assets.
 
-GitHub Actions also retains the tested downloads as `windows-x64-VERSION` artifacts for 14 days, and the packaged smoke-test screenshot/log for seven days. This is useful if release upload fails after the build passes.
+GitHub Actions also retains the tested downloads as `windows-x64-VERSION` artifacts for 14 days, and the packaged smoke-test screenshot/log for seven days. This is useful if release upload fails after the build passes. The smoke test launches the ZIP contents outside the source checkout so native loading cannot silently fall back to development dependencies.
 
 Installer upgrades and ZIP builds use `%APPDATA%\granny-is-watching\progress.json`. Uninstalling does not delete progress. This loop packages downloads; it does not add an in-app automatic updater.
 
