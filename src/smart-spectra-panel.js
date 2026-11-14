@@ -59,12 +59,12 @@ export function mountSmartSpectra() {
       if (stream) video.play().catch(() => {});
     }
     $('preview').hidden = !stream;
-    $('readings').hidden = !stream;
+    $('readings').hidden = !stream || !['starting', 'measuring', 'adjust'].includes(phase);
     let status = {
       off: 'Camera off', opening: 'Opening camera…', preview: 'Live preview',
-      starting: 'Starting signals…', measuring: 'Measuring', adjust: 'Adjust camera',
-      stopping: 'Stopping signals…',
-      'camera-error': 'Camera unavailable', 'signal-error': 'Signals unavailable',
+      starting: 'Starting face tracking…', measuring: 'Face tracking on', adjust: 'Adjust camera',
+      stopping: 'Stopping face tracking…',
+      'camera-error': 'Camera unavailable', 'signal-error': 'Face tracking unavailable',
     }[phase];
     if (encounter === 'away' && ['measuring', 'adjust'].includes(phase)) {
       status = state.validationCode === 1 ? 'Face out of view' : status;
@@ -73,18 +73,20 @@ export function mountSmartSpectra() {
     // Do not replace aria-live text on every metrics tick or repeat SDK hints.
     if ($('status').textContent !== status) $('status').textContent = status;
     if ($('hint').textContent !== hint) $('hint').textContent = hint;
+    $('hint').hidden = !hint;
     const sdkLabel = {
-      idle: 'SDK idle', starting: 'SDK starting…', running: 'SDK running',
-      stopping: 'SDK stopping…', error: 'SDK error',
+      idle: 'Tracking off', starting: 'Starting…', running: 'Tracking on',
+      stopping: 'Stopping…', error: 'Unavailable',
     }[state.sdkStatus];
     if ($('sdk-status').textContent !== sdkLabel) $('sdk-status').textContent = sdkLabel;
     const cameraStatus = document.getElementById('camera-settings-status');
     if (cameraStatus.textContent !== hint) cameraStatus.textContent = hint;
+    cameraStatus.hidden = !hint;
     toggle.textContent = phase === 'opening' ? 'Cancel' : stream ? 'Stop camera' : 'Enable camera';
     toggle.disabled = false;
     retry.hidden = !stream || !state.nativeAvailable || !state.hasKey;
-    retry.textContent = testUntil > Date.now() ? 'Stop signal test'
-      : phase === 'signal-error' ? 'Retry signals · 15s' : 'Test signals · 15s';
+    retry.textContent = testUntil > Date.now() ? 'Stop test'
+      : phase === 'signal-error' ? 'Retry tracking · 15s' : 'Test tracking · 15s';
     settings.hidden = !state.nativeAvailable;
     if (state.needsKey && stream && !promptedForKey) {
       settings.open = true;
@@ -115,7 +117,8 @@ export function mountSmartSpectra() {
     for (const sample of session.readings.snapshot({ active, validationCode, validationAt })) {
       const field = fields.get(sample.id);
       field.value.textContent = sample.value;
-      field.detail.textContent = !active && session.state.stream && phase === 'preview' ? 'SDK idle' : sample.detail;
+      field.detail.textContent = active ? sample.detail : '';
+      field.detail.hidden = !field.detail.textContent;
       field.reading.dataset.quality = sample.quality;
     }
   }

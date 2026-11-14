@@ -17,11 +17,11 @@
       <header class="settings-heading"><h2 id="settings-title">Settings</h2><button id="settings-close" type="button" aria-label="Close settings">×</button></header>
       <label class="setting-row"><span>Sound</span><input id="setting-sound" type="checkbox" checked /></label>
       <label class="setting-row"><span>Facial hurdles<small>Granny reacts to your expression and head direction.</small></span><input id="setting-facial" type="checkbox" /></label>
-      <label class="setting-row"><span>Save progress<small>Keep burned pits. Retry deaths from the start of the round.<br />Switching off removes the checkpoint and ends the run on death.</small></span><input id="setting-save" type="checkbox" checked /></label>
+      <label class="setting-row"><span>Save progress<small>Retry the round after death. Turning this off clears your saved game.</small></span><input id="setting-save" type="checkbox" checked /></label>
       <p id="save-status" class="settings-status" role="status"></p>
       <div class="camera-settings">
         <h3>Camera</h3>
-        <label class="setting-row"><span>Show camera preview<small>Facial analysis runs only when an encounter needs it.</small></span><input id="setting-camera" type="checkbox" checked /></label>
+        <label class="setting-row"><span>Show camera preview</span><input id="setting-camera" type="checkbox" checked /></label>
         <p id="camera-settings-status" class="settings-status" role="status"></p>
         <label id="spectra-camera-picker" class="spectra-camera-picker" hidden>Camera
           <select id="spectra-camera" aria-label="Choose camera"></select>
@@ -29,14 +29,14 @@
         <details id="spectra-settings" class="spectra-settings" hidden>
           <summary>API key</summary>
           <form id="spectra-key-form">
-            <label for="spectra-key">SmartSpectra key · this session only</label>
+            <label for="spectra-key">SmartSpectra API key · not saved</label>
             <input id="spectra-key" type="password" autocomplete="off" spellcheck="false" maxlength="1024" placeholder="Paste your API key" />
             <button type="submit">Use key</button>
           </form>
         </details>
         <div class="spectra-controls">
           <button id="spectra-toggle" type="button" disabled>Enable camera</button>
-          <button id="spectra-retry" type="button" hidden>Retry signals</button>
+          <button id="spectra-retry" type="button" hidden>Retry tracking</button>
         </div>
       </div>
       <p class="settings-note">Facial encounters pause while settings are open.</p>
@@ -50,17 +50,17 @@
     </section>
     <aside id="spectra-panel" class="spectra-panel" aria-label="Camera and detected signals" data-state="off">
       <header class="spectra-heading">
-        <h2><span id="spectra-light" aria-hidden="true"></span> Camera &amp; signals</h2>
+        <h2><span id="spectra-light" aria-hidden="true"></span> Camera</h2>
         <button id="spectra-collapse" type="button" aria-expanded="true" aria-controls="spectra-body" aria-label="Collapse camera panel">−</button>
       </header>
       <div id="spectra-body">
         <div id="spectra-preview" class="spectra-preview" hidden>
           <video id="spectra-video" autoplay muted playsinline aria-label="Your live camera feed"></video>
-          <span id="spectra-sdk-status" role="status">SDK idle</span>
+          <span id="spectra-sdk-status" role="status">Tracking off</span>
           <span id="spectra-camera-name">Live camera</span>
         </div>
         <p id="spectra-status" class="spectra-status" role="status">Camera off</p>
-        <p id="spectra-hint" class="spectra-hint">Enable your camera for a live preview. Facial analysis runs only when needed.</p>
+        <p id="spectra-hint" class="spectra-hint">Enable your camera for a live preview.</p>
         <div id="spectra-readings" hidden>
           <dl id="spectra-primary" class="spectra-signals"></dl>
         </div>

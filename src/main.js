@@ -303,8 +303,8 @@ async function launch() {
     again.textContent = retry ? 'Retry round' : phase === 'draw' ? 'Replay round' : 'Start new game';
     $('new-game').hidden = !retry && phase !== 'draw';
     $('retry-hint').textContent = retry
-      ? 'Restart round ' + (deathCheckpoint.burned.length + 1) + '. Your burned pits and rulebook clue are kept.'
-      : death ? 'This run has ended. Saving is off or no round checkpoint is available.' : '';
+      ? 'Round ' + (deathCheckpoint.burned.length + 1) : '';
+    $('retry-hint').hidden = !$('retry-hint').textContent;
   }
 
   function updateProgressUI() {
@@ -312,10 +312,12 @@ async function launch() {
     continueRun.hidden = !checkpoint;
     continueRun.textContent = checkpoint ? 'Continue · Round ' + (checkpoint.burned.length + 1) : 'Continue';
     if (!wake.disabled) wake.textContent = checkpoint ? 'New game' : 'Wake up';
-    const saved = checkpoint ? 'Round ' + (checkpoint.burned.length + 1) + ' saved on this device. ' + checkpoint.burned.length + ' burned pits kept.' : 'Your round will be saved on this device.';
-    $('save-status').textContent = progress.issue || (preferences.saveProgress ? saved : 'Saving off. Death ends the run.');
+    const saved = checkpoint ? 'Round ' + (checkpoint.burned.length + 1) + ' saved.' : '';
+    $('save-status').textContent = progress.issue || (preferences.saveProgress ? saved : 'Death ends your run.');
+    $('save-status').hidden = !$('save-status').textContent;
     $('save-status').dataset.error = String(Boolean(progress.issue));
-    $('intro-save-status').textContent = progress.issue || (checkpoint ? 'Continue restarts the saved round with burned pits and the same clue.' : '');
+    $('intro-save-status').textContent = progress.issue;
+    $('intro-save-status').hidden = !progress.issue;
     if (!result.hidden) updateResultControls();
   }
 

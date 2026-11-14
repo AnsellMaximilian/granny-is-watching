@@ -25,7 +25,7 @@ export class SpectraSession {
     this.state = {
       phase: 'off', sdkStatus: 'idle', stream: null, validationCode: null, validationAt: null, devices: [],
       nativeAvailable: false, desktop: false, packaged: false, hasKey: false, needsKey: false,
-      hint: 'Enable your camera for a live preview. Facial analysis runs only when needed.',
+      hint: 'Enable your camera for a live preview.',
     };
   }
 
@@ -38,7 +38,7 @@ export class SpectraSession {
       hasKey: Boolean(this.#key),
       needsKey: !this.#key,
     });
-    if (config.environmentError) this.state.hint = 'The local key file could not be loaded. You can enter a key in Settings.';
+    if (config.environmentError) this.state.hint = 'Your API key could not be loaded. Enter it in Settings.';
     this.emit();
   }
 
@@ -77,14 +77,14 @@ export class SpectraSession {
   #previewState() {
     this.state.phase = this.state.stream ? 'preview' : 'off';
     this.state.sdkStatus = 'idle';
-    this.state.hint = !this.state.stream ? 'Camera stopped. Enable it whenever you want a preview.'
+    this.state.hint = !this.state.stream ? 'Enable your camera for a live preview.'
       : !this.state.nativeAvailable ? this.state.desktop
         ? this.state.packaged
-          ? 'Live preview only. Install the latest Microsoft Visual C++ x64 runtime and restart the game. Reinstall the game if needed, or leave facial hurdles off.'
-          : 'Live preview only. The native SmartSpectra runtime is unavailable. Run npm ci and restart the game.'
-        : 'Live preview only. Open the desktop game with npm start to use SmartSpectra.'
-      : !this.#key ? 'Live preview ready. Enter your SmartSpectra API key in Settings to detect signals.'
-      : 'Live preview only. SDK idle until a facial encounter or a 15-second signal test.';
+          ? 'Face tracking is unavailable. Install the latest Microsoft Visual C++ x64 runtime and restart the game. Reinstall the game if needed.'
+          : 'Face tracking is unavailable. Restart the game or reinstall it.'
+        : 'Face tracking is available in the desktop game.'
+      : !this.#key ? 'Enter your SmartSpectra API key in Settings to enable face tracking.'
+      : '';
     this.emit();
   }
 
@@ -106,7 +106,7 @@ export class SpectraSession {
       if (this.#sdkStarting) this.#disposeSdk();
       if (this.#sdkStarted || this.#stopRequested) {
         this.#stopRequested = true;
-        Object.assign(this.state, { phase: 'stopping', sdkStatus: 'stopping', hint: 'Stopping facial analysis. Your camera preview stays on.' });
+        Object.assign(this.state, { phase: 'stopping', sdkStatus: 'stopping', hint: '' });
         this.emit();
       } else if (!this.#signalBlocked) this.#previewState();
     }
@@ -132,7 +132,7 @@ export class SpectraSession {
     for (const track of this.state.stream?.getTracks() ?? []) track.stop();
     Object.assign(this.state, {
       phase: 'off', sdkStatus: 'idle', stream: null,
-      hint: 'Camera stopped. Enable it whenever you want to check the signals.',
+      hint: 'Enable your camera for a live preview.',
     });
     this.emit();
   }
@@ -249,7 +249,7 @@ export class SpectraSession {
     };
     this.#failSignals = fail;
     this.#lastFeedbackAt = this.now();
-    Object.assign(this.state, { phase: 'starting', sdkStatus: 'starting', hint: 'Starting facial analysis. Keep your face visible and well lit.' });
+    Object.assign(this.state, { phase: 'starting', sdkStatus: 'starting', hint: 'Face the camera in even light.' });
     this.emit();
     try {
       const { SmartSpectraSDK, requestedMetrics, decodeMetrics } = await this.loadSdk();

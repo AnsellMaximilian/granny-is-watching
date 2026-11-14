@@ -296,7 +296,7 @@ test('browser or missing-native fallback keeps the preview usable without loadin
     assert.equal(session.state.phase, 'preview');
     assert.equal(session.state.stream, stream);
     assert.equal(instances.length, 0);
-    assert.match(session.state.hint, desktop ? /npm ci/ : /npm start/);
+    assert.match(session.state.hint, desktop ? /Restart the game/ : /desktop game/);
     session.stopCamera();
   }
 });

@@ -107,7 +107,7 @@ export class SignalReadings {
       const result = { id: signal.id, value: '—', detail: 'Not connected', quality: 'waiting' };
       if (!active || this.startedAt === null) return result;
       if (signal.id === 'facing' && [1, 17].includes(validationCode) && validationAt !== null && now - validationAt <= 1000) {
-        return { ...result, value: 'Away', detail: validationCode === 1 ? 'Face out of view' : 'SDK pose feedback', quality: 'live' };
+        return { ...result, value: 'Away', detail: validationCode === 1 ? 'Face out of view' : 'Head turned away', quality: 'live' };
       }
       if (validationCode !== null && ![0, 3, 7, 17].includes(validationCode)) {
         return { ...result, detail: 'Adjust camera' };
@@ -124,7 +124,7 @@ export class SignalReadings {
         return {
           ...result,
           value: validationCode !== 17 && this.direction.value ? 'Toward' : 'Away',
-          detail: 'Rough head direction', quality: 'live',
+          detail: 'Head direction', quality: 'live',
         };
       }
       if (signal.kind === 'detection') {
@@ -183,26 +183,26 @@ export function spectraError(error) {
   };
   if (cameraErrors[error?.name]) return cameraErrors[error.name];
   const errors = {
-    2: 'SmartSpectra rejected the API key. Enter a valid key in Settings, then retry signals.',
-    3: 'SmartSpectra could not configure these signals on this device. Update or reinstall the SDK, then retry.',
-    4: 'SmartSpectra credits are exhausted. Check your developer account before retrying.',
-    5: 'SmartSpectra could not authenticate online. Check your connection, then retry signals.',
-    6: 'SmartSpectra is temporarily unavailable. Retry signals in a moment.',
+    2: 'This API key was not accepted. Enter a valid SmartSpectra key in Settings, then try again.',
+    3: 'Face tracking could not start on this device. Update or reinstall the game, then try again.',
+    4: 'Your SmartSpectra credits have run out. Check your Presage account before trying again.',
+    5: 'Could not verify your API key online. Check your connection, then try again.',
+    6: 'Face tracking is temporarily unavailable. Try again in a moment.',
     7: 'The camera input became unavailable. Reconnect it and enable the camera again.',
-    8: 'SmartSpectra could not process this camera feed. Check lighting and camera support, then retry signals.',
+    8: 'Face tracking could not read your camera feed. Check your lighting, then try again.',
     9: 'This camera frame format could not be processed. Select another camera or retry.',
     10: 'Camera timing became inconsistent. Stop the camera and enable it again.',
-    11: 'Camera frames were interrupted. Check your camera, then retry signals.',
-    13: 'This API key does not allow the requested signals. Check its permissions in your developer account.',
-    14: 'Frame rate stayed too low for reliable signals. Improve lighting and close other apps, then retry signals.',
-    SMARTSPECTRA_IPC_TIMEOUT: 'SmartSpectra did not respond in time. Retry signals, or restart the desktop app.',
-    SIGNAL_STALLED: 'SmartSpectra stopped sending updates. Retry signals, or restart the desktop app.',
-    SIGNAL_STOPPED: 'SmartSpectra stopped processing. Retry signals, or restart the desktop app.',
+    11: 'The camera feed was interrupted. Check its connection, then try again.',
+    13: 'This API key does not include facial tracking. Check your Presage account.',
+    14: 'Frame rate stayed too low for face tracking. Improve lighting and close other apps, then try again.',
+    SMARTSPECTRA_IPC_TIMEOUT: 'Face tracking did not respond in time. Try again or restart the game.',
+    SIGNAL_STALLED: 'Face tracking stopped updating. Try again or restart the game.',
+    SIGNAL_STOPPED: 'Face tracking stopped. Try again or restart the game.',
     CAMERA_TIMEOUT: 'The camera did not open in time. Check the permission prompt or webcam connection, then retry.',
     CAMERA_ENDED: 'The camera disconnected. Reconnect it and enable the camera again.',
-    CAPTURE_UNSUPPORTED: 'Camera capture is unavailable here. Open the desktop game with npm start.',
-    PROCESSOR_UNSUPPORTED: 'This desktop runtime cannot process camera frames. Update the desktop app, then retry signals.',
+    CAPTURE_UNSUPPORTED: 'Camera access is unavailable here. Open the desktop game.',
+    PROCESSOR_UNSUPPORTED: 'Face tracking is unavailable in this version. Update the game, then try again.',
   };
   // Native messages can include credentials or paths. Keep raw failures out of the UI.
-  return errors[error?.code] ?? 'Signals are unavailable. Retry signals, or restart the desktop app. You can keep playing.';
+  return errors[error?.code] ?? 'Face tracking is unavailable. Try again or restart the game. You can keep playing.';
 }
