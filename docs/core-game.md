@@ -16,7 +16,7 @@ Switching **Save progress** off removes the saved checkpoint and makes death end
 
 Desktop saves use `progress.json` in Electron's application data directory, with atomic replacement and queued writes. Browser development uses local browser storage. Saves stay on this device/profile, without an account or cloud sync. They contain settings and round setup, never webcam images, measurements, or API keys. Camera access starts through a player action, including starting or continuing with facial hurdles enabled.
 
-Windows installer and ZIP builds keep progress at `%APPDATA%\granny-is-watching\progress.json` across upgrades. Packaged apps do not load the developer's `.env.local`; players provide their own key in Settings or their environment. A bundled-runtime failure offers reinstall guidance while leaving the base game playable. See [Windows releases](releases.md) for downloading and testing a build.
+Windows installer and ZIP builds keep progress at `%APPDATA%\granny-is-watching\progress.json` across upgrades. Packaged apps do not load the developer's `.env.local`; players provide their own key in Settings or their environment. A bundled-runtime failure recommends installing the latest Microsoft Visual C++ x64 runtime, or reinstalling the game, while leaving the base game playable. See [Windows releases](releases.md) for downloading and testing a build.
 
 ## Camera and signals preview
 

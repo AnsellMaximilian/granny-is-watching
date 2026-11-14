@@ -80,7 +80,7 @@ export class SpectraSession {
     this.state.hint = !this.state.stream ? 'Camera stopped. Enable it whenever you want a preview.'
       : !this.state.nativeAvailable ? this.state.desktop
         ? this.state.packaged
-          ? 'Live preview only. The bundled facial runtime could not load. Reinstall the game, or continue with facial hurdles off.'
+          ? 'Live preview only. Install the latest Microsoft Visual C++ x64 runtime and restart the game. Reinstall the game if needed, or leave facial hurdles off.'
           : 'Live preview only. The native SmartSpectra runtime is unavailable. Run npm ci and restart the game.'
         : 'Live preview only. Open the desktop game with npm start to use SmartSpectra.'
       : !this.#key ? 'Live preview ready. Enter your SmartSpectra API key in Settings to detect signals.'

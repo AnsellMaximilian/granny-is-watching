@@ -309,6 +309,7 @@ test('a packaged runtime failure offers reinstall guidance instead of source-dev
   assert.equal(session.state.stream, stream);
   assert.equal(instances.length, 0);
   assert.match(session.state.hint, /Reinstall the game/);
+  assert.match(session.state.hint, /Visual C\+\+ x64 runtime/);
   assert.ok(!session.state.hint.includes('npm'));
   session.stopCamera();
 });

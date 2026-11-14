@@ -4,7 +4,7 @@ A low-poly horror game set in a rural Indonesian house. Wake up on the floor, ta
 
 ## Run on desktop
 
-Packaged Windows builds are available from [GitHub Releases](https://github.com/AnsellMaximilian/granny-is-watching/releases) after a release workflow completes. Download the installer or application ZIP; Node.js is not needed for these builds. The [release guide](docs/releases.md) covers draft downloads, version tags, GitHub Actions, and optional signing credentials.
+Packaged Windows builds are available from [GitHub Releases](https://github.com/AnsellMaximilian/granny-is-watching/releases) after a release workflow completes. Download the installer or application ZIP; Node.js is not needed for these builds. Facial analysis requires the latest Microsoft Visual C++ x64 runtime. The [release guide](docs/releases.md) covers draft downloads, native prerequisites, version tags, GitHub Actions, and optional signing credentials.
 
 With Node.js 22.12 or newer installed, run:
 
