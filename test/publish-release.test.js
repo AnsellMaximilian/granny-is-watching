@@ -29,7 +29,7 @@ import { writeFileSync } from 'node:fs';
 const mode = process.env.RELEASE_FIXTURE_MODE;
 const calls = [];
 const commit = '${commit}';
-const draft = { id: 10, tag_name: '${tag}', target_commitish: commit, draft: true, body: 'Existing notes.', html_url: 'https://github.com/example/game/releases/tag/${tag}', assets: [{id: 7, name: '${installer}'}] };
+const draft = { id: 10, tag_name: mode === 'placeholder' ? 'untagged-fixture' : '${tag}', name: 'Granny is Watching ${tag}', target_commitish: commit, draft: true, body: 'Existing notes.', html_url: 'https://github.com/example/game/releases/tag/${tag}', assets: [{id: 7, name: '${installer}'}] };
 const json = (data, status = 200) => new Response(JSON.stringify(data), {status});
 globalThis.fetch = async (url, options = {}) => {
   const parsed = new URL(url);
@@ -54,7 +54,7 @@ globalThis.fetch = async (url, options = {}) => {
     return json([draft]);
   }
   if (parsed.pathname.endsWith('/releases') && method === 'POST') return json({...draft, assets: []}, 201);
-  if (parsed.pathname.endsWith('/releases/10') && method === 'PATCH') return json({...draft, body: body.body, assets: mode === 'new' || mode === 'upload-error' ? [] : draft.assets});
+  if (parsed.pathname.endsWith('/releases/10') && method === 'PATCH') return json({...draft, tag_name: body.tag_name ?? 'untagged-fixture', body: body.body, assets: mode === 'new' || mode === 'upload-error' ? [] : draft.assets});
   throw Error('Unexpected request: ' + method + ' ' + url);
 };
 `);
@@ -75,6 +75,18 @@ test('a new release creates a tag at the tested commit and uploads assets to a d
   assert.equal(created.body.draft, true);
   assert.equal(created.body.prerelease, true);
   assert.equal(created.body.target_commitish, commit);
+  const update = calls.find(call => call.method === 'PATCH');
+  assert.equal(update.body.tag_name, tag);
+  assert.equal(update.body.target_commitish, commit);
+  assert.equal(update.body.draft, true);
+  assert.equal(calls.filter(call => call.route.includes('/releases/10/assets?')).length, 3);
+});
+
+test('a GitHub draft placeholder is found by its release title and repaired without duplication', async t => {
+  const { result, calls } = await fixture(t, 'placeholder');
+  assert.equal(result.status, 0, result.stderr);
+  assert.ok(!calls.some(call => call.route.endsWith('/releases') && call.method === 'POST'));
+  assert.equal(calls.find(call => call.method === 'PATCH').body.tag_name, tag);
   assert.equal(calls.filter(call => call.route.includes('/releases/10/assets?')).length, 3);
 });
 

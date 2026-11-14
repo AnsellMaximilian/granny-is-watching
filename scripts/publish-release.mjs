@@ -6,6 +6,7 @@ import { releaseVersion } from './prepare-release.mjs';
 
 const tag = process.env.RELEASE_TAG;
 const version = releaseVersion(tag);
+const title = 'Granny is Watching ' + tag;
 const commit = process.env.RELEASE_COMMIT;
 assert.match(commit ?? '', /^[a-f0-9]{40}$/);
 const repository = process.env.GITHUB_REPOSITORY;
@@ -47,13 +48,14 @@ let release = await api(`/repos/${repository}/releases/tags/${encodeURIComponent
 if (!release) {
   for (let page = 1; ; page++) {
     const releases = await api(`/repos/${repository}/releases?per_page=100&page=${page}`);
-    release = releases.find(candidate => candidate.tag_name === tag);
+    release = releases.find(candidate => candidate.tag_name === tag
+      || (candidate.draft && candidate.tag_name?.startsWith('untagged-') && candidate.name === title));
     if (release || releases.length < 100) break;
   }
 }
 if (release) {
   assert.equal(release.draft, true, 'Published release assets are immutable here. Use a new version.');
-  if (!reference) assert.equal(release.target_commitish, commit, 'The draft targets a different commit.');
+  if (!reference || release.tag_name !== tag) assert.equal(release.target_commitish, commit, 'The draft targets a different commit.');
 }
 if (!reference) {
   await api(`/repos/${repository}/git/refs`, {
@@ -65,16 +67,23 @@ if (!release) {
   release = await api(`/repos/${repository}/releases`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      tag_name: tag, target_commitish: commit, name: 'Granny is Watching ' + tag,
+      tag_name: tag, target_commitish: commit, name: title,
       draft: true, prerelease: version.includes('-'), generate_release_notes: true,
     }),
   });
 }
 const notes = await readFile('docs/release-notes.md', 'utf8');
-if (!release.body?.includes(notes.trim())) {
+const hasInstructions = release.body?.includes(notes.trim());
+if (!hasInstructions || release.tag_name !== tag) {
   release = await api(`/repos/${repository}/releases/${release.id}`, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ body: notes + '\n\n' + (release.body ?? '') }),
+    // Keep draft identity explicit: GitHub can otherwise assign an untagged
+    // placeholder when updating a draft's body through the release endpoint.
+    body: JSON.stringify({
+      tag_name: tag, target_commitish: commit, name: title,
+      draft: true, prerelease: version.includes('-'),
+      body: hasInstructions ? release.body : notes + '\n\n' + (release.body ?? ''),
+    }),
   });
 }
 for (const file of assets) {
