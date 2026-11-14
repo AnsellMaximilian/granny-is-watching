@@ -160,3 +160,27 @@ test('looking toward upside-down Granny has grace and tolerance before a single 
   assert.equal(hurdles.needsSignals, false, 'No more analysis is needed after the single theft');
   assert.deepEqual(advance(20000, { facing: true }), []);
 });
+
+test('a deliberate tracking retry preserves the encounter and restores its grace without rerolling the visit', () => {
+  for (const active of ['happy', 'away']) {
+    const { hurdles, advance } = fixture();
+    if (active === 'happy') advance(5000);
+    else hurdles.activateAway(true);
+    advance(4000, { facing: true });
+    assert.ok(hurdles.pressure > 0);
+    const choice = hurdles.choiceMs;
+    advance(30000, { expression: null, facing: null });
+    hurdles.recoverTracking();
+    assert.equal(hurdles.active, active);
+    assert.equal(hurdles.choiceMs, choice);
+    assert.equal(hurdles.pressure, 0);
+    advance(1500, { facing: true });
+    assert.equal(hurdles.pressure, 0);
+    if (active === 'happy') assert.deepEqual(advance(900, { expression: happy }), ['happy-pass']);
+  }
+  const { hurdles, advance } = fixture();
+  hurdles.activateAway(true);
+  advance(10000, { facing: true });
+  hurdles.recoverTracking();
+  assert.equal(hurdles.awayPenalized, true, 'Retry cannot grant another theft after the encounter was resolved');
+});

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { Metrics, decodeMetrics } from '@smartspectra/node-sdk/messages';
 import { SignalReadings, spectraError, validationHint } from '../src/smart-spectra-readings.js';
 import { SpectraSession } from '../src/smart-spectra-session.js';
+import { SpectraDiagnostics } from '../src/spectra-diagnostics.js';
 import { estimateCameraFacing } from '../src/face-direction.js';
 
 function facePoints({ noseX = 300, noseY = 240 } = {}) {
@@ -214,7 +215,7 @@ function fakeStream() {
   return { track, getTracks: () => [track], getVideoTracks: () => [track] };
 }
 
-function sessionFixture({ getUserMedia, loadSdk, captureTimeoutMs, now } = {}) {
+function sessionFixture({ getUserMedia, loadSdk, captureTimeoutMs, now, diagnostics } = {}) {
   const stream = fakeStream();
   const instances = [];
   class FakeSdk {
@@ -233,7 +234,7 @@ function sessionFixture({ getUserMedia, loadSdk, captureTimeoutMs, now } = {}) {
   const session = new SpectraSession({
     mediaDevices: { getUserMedia: getUserMedia ?? (async () => stream), enumerateDevices: async () => [] },
     loadSdk: loadSdk ?? (async () => ({ SmartSpectraSDK: FakeSdk, requestedMetrics: [11, 12, 13, 14], decodeMetrics: (value) => value })),
-    captureTimeoutMs, now,
+    captureTimeoutMs, now, diagnostics,
   });
   session.configure({ desktop: true, nativeAvailable: true, apiKey: 'test-local-key' });
   return { session, stream, instances, FakeSdk };
@@ -354,6 +355,35 @@ test('fatal low-frame-rate errors keep the preview, clear signals and require a 
   await session.startSignals();
   assert.equal(instances.length, 2);
   assert.equal(session.state.phase, 'measuring');
+  session.stopCamera();
+});
+
+test('diagnostics preserve working face feedback and the exact cutoff time without changing recovery', async () => {
+  const records = [];
+  const base = 1_800_000_000_000;
+  let time = base;
+  const diagnostics = new SpectraDiagnostics({ write: record => records.push(record), now: () => time, monotonicNow: () => time - base });
+  const { session, instances } = sessionFixture({ now: () => time, diagnostics });
+  await session.startCamera();
+  await session.startSignals();
+  time += 1000;
+  instances[0].send('frameSentThrough', true, time * 1000);
+  instances[0].send('metrics', { face: { expression: [{ stable: true, timestamp: time * 1000, scores: [{ type: 5, confidence: 90 }] }] } });
+  time += 2000;
+  instances[0].send('validationStatus', 11, time * 1000, 'Frame rate is low.');
+  time += 2000;
+  instances[0].send('error', 14, 'raw message with test-local-key', true);
+  const error = records.find(record => record.event === 'sdk_error');
+  assert.equal(error.code, 14);
+  assert.equal(error.retryable, true);
+  assert.equal(error.source, 'sdk_event');
+  assert.equal(error.sessionElapsedMs, 5000);
+  assert.equal(records.find(record => record.event === 'first_stable_face').sessionElapsedMs, 1000);
+  assert.equal(records.find(record => record.event === 'session_end').sessionElapsedMs, 5000);
+  assert.ok(!JSON.stringify(records).includes('test-local-key'));
+  assert.ok(!JSON.stringify(records).includes('confidence'));
+  assert.equal(session.state.phase, 'signal-error');
+  assert.equal(instances.length, 1, 'Logging never automatically retries a failed session');
   session.stopCamera();
 });
 
@@ -555,5 +585,48 @@ test('credit failures stay blocked across automatic encounter requests until a d
   await session.startSignals();
   assert.equal(instances.length, 2);
   assert.equal(session.state.sdkStatus, 'running');
+  session.stopCamera();
+});
+
+test('low-rate validation recovers in place, but a terminal low-rate failure needs one deliberate fresh session', async () => {
+  let time = Date.now();
+  const { session, instances, stream } = sessionFixture({ now: () => time });
+  const happy = () => ({ face: { expression: [{ stable: true, timestamp: time * 1000, scores: [{ type: 5, confidence: 90 }] }] } });
+  await session.startCamera();
+  await session.setAnalysisNeeded(true);
+  const failed = instances[0];
+  failed.send('metrics', happy());
+  assert.equal(session.gameplaySignals().expression.type, 5);
+  failed.send('validationStatus', 11, time * 1000, 'Frame rate is low.');
+  assert.equal(session.state.phase, 'adjust');
+  assert.equal(session.gameplaySignals().expression, null);
+  time += 100;
+  failed.send('validationStatus', 0, time * 1000, '');
+  failed.send('metrics', happy());
+  assert.equal(session.gameplaySignals().expression.type, 5);
+  assert.equal(instances.length, 1, 'A validation warning clears without a new session');
+  failed.send('error', 14, 'Sustained low frame rate', true);
+  assert.equal(session.state.errorCode, 14);
+  assert.equal(session.state.retryable, true);
+  assert.equal(session.gameplaySignals().healthy, false);
+  assert.equal(stream.track.readyState, 'live');
+  for (let turn = 0; turn < 3; turn++) {
+    await session.setAnalysisNeeded(false);
+    await session.setAnalysisNeeded(true);
+  }
+  assert.equal(instances.length, 1, 'New frames and choices must not automatically spend another session');
+  await session.startSignals();
+  assert.equal(instances.length, 2);
+  assert.equal(instances[1].starts, 1);
+  assert.equal(session.state.phase, 'measuring');
+  assert.equal(session.state.retryable, false);
+  assert.equal(session.state.errorCode, null);
+  assert.equal(session.gameplaySignals().expression, null, 'A fresh session cannot reuse the failed session\'s expression');
+  failed.send('error', 14, '', true);
+  failed.send('metrics', happy());
+  assert.equal(session.state.phase, 'measuring');
+  assert.equal(session.gameplaySignals().expression, null);
+  instances[1].send('metrics', happy());
+  assert.equal(session.gameplaySignals().expression.type, 5);
   session.stopCamera();
 });

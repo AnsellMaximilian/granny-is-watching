@@ -3,6 +3,8 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const fs = require('node:fs');
 const { registerProgressIpc } = require('./progress.cjs');
+const { registerSpectraDiagnosticsIpc } = require('./spectra-diagnostics.cjs');
+const packageInfo = require('../package.json');
 
 const gameFile = path.join(__dirname, '../dist/index.html');
 const gameUrl = pathToFileURL(gameFile).href;
@@ -26,6 +28,7 @@ if (app.isPackaged) {
 
 let bindSmartSpectraIpc;
 let nativeAvailable = false;
+let diagnostics;
 
 function isGamePage(url) {
   try {
@@ -56,6 +59,7 @@ function openGame() {
     if (!isGamePage(url)) event.preventDefault();
   });
   window.webContents.on('will-attach-webview', (event) => event.preventDefault());
+  window.webContents.on('did-finish-load', () => diagnostics?.write({ event: 'renderer_loaded' }));
   if (bindSmartSpectraIpc) {
     try {
       bindSmartSpectraIpc(window, { logger: () => {} });
@@ -66,13 +70,25 @@ function openGame() {
 }
 
 app.whenReady().then(() => {
-  const progress = registerProgressIpc({ app, ipcMain, isTrusted: (event) => event.senderFrame === event.sender.mainFrame && isGamePage(event.senderFrame.url) });
+  const isTrusted = event => Boolean(event.senderFrame && event.senderFrame === event.sender.mainFrame && isGamePage(event.senderFrame.url));
+  const progress = registerProgressIpc({ app, ipcMain, isTrusted });
+  diagnostics = registerSpectraDiagnosticsIpc({
+    ipcMain, isTrusted,
+    file: app.isPackaged
+      ? path.join(app.getPath('userData'), 'logs/smartspectra-diagnostics.jsonl')
+      : path.join(__dirname, '../.playtest/smartspectra-diagnostics.jsonl'),
+    metadata: {
+      appVersion: app.getVersion(), sdkVersion: packageInfo.dependencies['@smartspectra/node-sdk'],
+      electronVersion: process.versions.electron, chromiumVersion: process.versions.chrome,
+      platform: process.platform, packaged: app.isPackaged,
+    },
+  });
   let quitting = false;
   app.on('before-quit', (event) => {
     if (quitting) return;
     event.preventDefault();
     quitting = true;
-    void progress.flush().finally(() => app.quit());
+    void Promise.all([progress.flush(), diagnostics.flush()]).finally(() => app.quit());
   });
   // A missing or unsupported native runtime must not prevent the game opening.
   try { ({ bindSmartSpectraIpc } = require('@smartspectra/node-sdk/main')); }

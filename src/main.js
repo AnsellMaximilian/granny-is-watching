@@ -238,6 +238,7 @@ async function launch() {
       return;
     }
     const signals = spectra.gameplaySignals();
+    const tracking = spectra.trackingStatus();
     const focused = !document.hidden && document.hasFocus()
       && !settingsDialog.open
       && !document.activeElement?.closest?.('#spectra-key-form, #spectra-camera-picker');
@@ -262,7 +263,7 @@ async function launch() {
       if (!busy) {
         const hint = !focused ? pausedHint
           : hurdles.awayPenalized ? 'She has taken her due. Choose a pit to send her away.'
-          : !signals.healthy || signals.facing === null ? 'Tracking paused. Reconnect the camera, or switch facial hurdles off.'
+          : !signals.healthy || signals.facing === null ? tracking.hint || 'Tracking paused. Check the camera in Settings.'
           : 'Look away from the camera while choosing an occupied pit on your side.';
         status(hurdles.awayPenalized ? 'Granny has taken her harvest' : ['Do not look at her', 'She can see you looking', 'Look away, child'][hurdles.stage], hint);
       }
@@ -275,12 +276,19 @@ async function launch() {
       if ($('facial-line').textContent !== line) $('facial-line').textContent = line;
       facialEncounter.dataset.stage = String(hurdles.stage);
       const hint = !focused ? pausedHint
-        : !signals.expression ? 'Tracking paused. Face the camera in even light, or turn facial hurdles off.' : '';
+        : !signals.expression ? tracking.hint || 'Tracking paused. Face the camera in even light, or turn facial hurdles off.' : '';
       if ($('facial-tracking').textContent !== hint) $('facial-tracking').textContent = hint;
+      $('facial-retry').hidden = !tracking.canRetry || settingsDialog.open;
       if (focused && signals.expression) sound.threat(hurdles.pressure);
       else sound.stopThreat();
     }
   }
+
+  for (const id of ['facial-retry', 'spectra-resume']) $(id).addEventListener('click', () => {
+    if (settingsDialog.open || !spectra.retryTracking()) return;
+    hurdles.recoverTracking();
+    sound.stopThreat();
+  });
 
   function setFacialMode(enabled, startCamera = false) {
     hurdles.setEnabled(enabled);
@@ -904,6 +912,11 @@ async function launch() {
     const deltaMs = now - facialTick;
     facialTick = now;
     updateFacialHurdles(deltaMs);
+    spectra.recordGameFrame({
+      gamePhase: phase, encounter: hurdles.active, focused: document.hasFocus(),
+      documentHidden: document.hidden, settingsOpen: settingsDialog.open,
+      gameFps: engine.getFps(), renderFrameMs: deltaMs,
+    });
     const elapsed = (now - phaseStart) / 1000;
     let overhead = 0;
     let stareLight = 0;

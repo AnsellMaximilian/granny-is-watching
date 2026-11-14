@@ -27,6 +27,13 @@ export class FacialHurdles {
     this.resetChoice();
   }
 
+  recoverTracking() {
+    if (!this.enabled || this.active === 'failed' || this.awayPenalized) return;
+    this.angerMs = 0;
+    this.happyMs = 0;
+    this.encounterMs = 0;
+  }
+
   activateAway(choosing) {
     if (!this.enabled || !choosing || this.active !== null) return false;
     this.active = 'away';

@@ -52,6 +52,7 @@
       <p id="facial-line" class="dialogue-line" aria-live="polite"></p>
       <p id="facial-instruction">Show Granny a happy face.</p>
       <p id="facial-tracking" role="status"></p>
+      <button id="facial-retry" class="action secondary" type="button" hidden>Retry tracking</button>
     </section>
     <aside id="spectra-panel" class="spectra-panel" aria-label="Camera and detected signals" data-state="off">
       <header class="spectra-heading">
@@ -61,7 +62,10 @@
       <div id="spectra-body">
         <div id="spectra-preview" class="spectra-preview" hidden>
           <video id="spectra-video" autoplay muted playsinline aria-label="Your live camera feed"></video>
-          <span id="spectra-sdk-status" role="status">Tracking off</span>
+          <div class="spectra-tracking-heading">
+            <span id="spectra-sdk-status" role="status">Tracking off</span>
+            <span id="spectra-feed-fps" title="Frames reported by tracking" hidden></span>
+          </div>
           <div class="spectra-preview-footer">
             <span id="spectra-camera-name">Live camera</span>
             <span id="spectra-fps" title="Measured preview frame rate">— FPS</span>
@@ -69,6 +73,7 @@
         </div>
         <p id="spectra-status" class="spectra-status" role="status">Camera off</p>
         <p id="spectra-hint" class="spectra-hint">Enable your camera for a live preview.</p>
+        <button id="spectra-resume" type="button" hidden>Retry tracking</button>
         <div id="spectra-readings" hidden>
           <dl id="spectra-primary" class="spectra-signals"></dl>
         </div>

@@ -1,6 +1,7 @@
 import { SIGNALS } from './smart-spectra-readings.js';
 import { SpectraSession } from './smart-spectra-session.js';
 import { FrameRate, watchPreviewFrames } from './frame-rate.js';
+import { SpectraDiagnostics } from './spectra-diagnostics.js';
 
 async function loadSdk() {
   if (typeof MediaStreamTrackProcessor === 'undefined' || typeof OffscreenCanvas === 'undefined') {
@@ -51,7 +52,8 @@ export function mountSmartSpectra() {
     fields.set(signal.id, { reading, value, detail });
   }
 
-  const session = new SpectraSession({ mediaDevices: navigator.mediaDevices, loadSdk, onChange: render });
+  const diagnostics = new SpectraDiagnostics({ write: window.grannySpectra?.logDiagnostic });
+  const session = new SpectraSession({ mediaDevices: navigator.mediaDevices, loadSdk, onChange: render, diagnostics });
   function render() {
     const state = session.state;
     const { phase, stream } = state;
@@ -72,7 +74,7 @@ export function mountSmartSpectra() {
       stopping: 'Stopping face tracking…',
       'camera-error': 'Camera unavailable', 'signal-error': 'Face tracking unavailable',
     }[phase];
-    if (encounter === 'away' && ['measuring', 'adjust'].includes(phase)) {
+    if (encounter === 'away' && ['measuring', 'adjust'].includes(phase) && [0, 1, 3, 7, 17].includes(state.validationCode)) {
       status = state.validationCode === 1 ? 'Face out of view' : status;
       hint = 'Look away from the camera while choosing a pit. Granny leaves after your choice.';
     }
@@ -93,6 +95,7 @@ export function mountSmartSpectra() {
     retry.hidden = !stream || !state.nativeAvailable || !state.hasKey;
     retry.textContent = testUntil > Date.now() ? 'Stop test'
       : phase === 'signal-error' ? 'Retry tracking · 15s' : 'Test tracking · 15s';
+    $('resume').hidden = !trackingStatus().canRetry;
     settings.hidden = !state.nativeAvailable;
     if (state.needsKey && stream && !promptedForKey) {
       settings.open = true;
@@ -138,10 +141,28 @@ export function mountSmartSpectra() {
     $('mode').textContent = [size, nominal].filter(Boolean).join(' · ') || 'Not reported';
     const active = ['starting', 'running'].includes(sdkStatus);
     const trackingFps = active ? session.frameRate.read() : lastTrackingFps;
+    $('resume').hidden = !trackingStatus().canRetry;
+    const usable = session.gameplaySignals();
+    const track = stream?.getVideoTracks()[0];
+    diagnostics.poll({
+      phase, sdkStatus, previewVisible: visible, previewFps: fps, trackingFps,
+      width: settings.width, height: settings.height, nominalFps: settings.frameRate,
+      cameraReadyState: track?.readyState, cameraMuted: track?.muted, cameraEnabled: track?.enabled,
+      healthy: usable.healthy, hasFreshExpression: Boolean(usable.expression), hasFreshFacing: usable.facing !== null,
+    });
     $('tracking-rate').textContent = active ? format(trackingFps)
       : trackingFps !== null ? 'Last: ' + format(trackingFps) : phase === 'signal-error' ? 'Unavailable' : 'Off';
     $('tracking-rate').dataset.quality = quality(trackingFps);
-    $('fps').title = 'Measured preview frame rate. Tracking feed: ' + $('tracking-rate').textContent;
+    $('feed-fps').hidden = !active;
+    $('feed-fps').textContent = format(trackingFps);
+    $('feed-fps').dataset.quality = quality(trackingFps);
+    $('feed-fps').title = 'Tracking feed: ' + $('tracking-rate').textContent;
+    $('fps').title = 'Preview: ' + format(fps) + '. Tracking feed: ' + $('tracking-rate').textContent;
+  }
+
+  function trackingStatus() {
+    const { phase, hint, retryable, stream, nativeAvailable, hasKey } = session.state;
+    return { phase, hint, canRetry: Boolean(phase === 'signal-error' && retryable && stream && nativeAvailable && hasKey && gameplayNeeded) };
   }
 
   function renderReadings() {
@@ -220,6 +241,7 @@ export function mountSmartSpectra() {
     window.removeEventListener('blur', focusChange);
     window.removeEventListener('focus', focusChange);
     session.stopCamera();
+    diagnostics.flush(true);
   }, { once: true });
 
   // Ordinary browser development remains playable, with preview-only support.
@@ -233,7 +255,17 @@ export function mountSmartSpectra() {
     ready = Promise.resolve();
   }
   return {
+    recordGameFrame: details => diagnostics.gameFrame(details),
     gameplaySignals: () => session.gameplaySignals(),
+    trackingStatus,
+    retryTracking() {
+      if (!trackingStatus().canRetry || document.hidden || !document.hasFocus()) return false;
+      testUntil = 0;
+      // A deliberate fresh session, as required after the SDK's terminal
+      // low-rate error. Automatic encounter demand never clears the latch.
+      void session.startSignals();
+      return true;
+    },
     setAnalysisNeeded(needed) { gameplayNeeded = needed; updateAnalysis(); },
     setEncounter(value) { encounter = value; render(); },
     setPreviewVisible(visible) { panel.hidden = !visible; },

@@ -17,17 +17,20 @@ export class SpectraSession {
   #signalTask = Promise.resolve();
   #frameCount = 0;
   #frameTimestamp = 0;
+  #diagnosticValidationCode = null;
 
-  constructor({ mediaDevices, loadSdk, onChange = () => {}, now = Date.now, captureTimeoutMs = 30000 }) {
+  constructor({ mediaDevices, loadSdk, onChange = () => {}, now = Date.now, captureTimeoutMs = 30000, diagnostics = null }) {
     this.mediaDevices = mediaDevices;
     this.loadSdk = loadSdk;
     this.onChange = onChange;
     this.captureTimeoutMs = captureTimeoutMs;
     this.now = now;
+    this.diagnostics = diagnostics;
     this.readings = new SignalReadings(now);
     this.frameRate = new FrameRate({ now });
     this.state = {
       phase: 'off', sdkStatus: 'idle', stream: null, validationCode: null, validationAt: null, devices: [], lastTrackingFps: null,
+      errorCode: null, retryable: false,
       nativeAvailable: false, desktop: false, packaged: false, hasKey: false, needsKey: false,
       hint: 'Enable your camera for a live preview.',
     };
@@ -46,7 +49,13 @@ export class SpectraSession {
     this.emit();
   }
 
-  emit() { this.onChange(this.state); }
+  emit() {
+    this.diagnostics?.poll({
+      phase: this.state.phase, sdkStatus: this.state.sdkStatus, validationCode: this.state.validationCode,
+      analysisNeeded: this.#analysisNeeded, signalBlocked: this.#signalBlocked,
+    });
+    this.onChange(this.state);
+  }
 
   gameplaySignals() {
     const active = ['measuring', 'adjust'].includes(this.state.phase)
@@ -59,7 +68,8 @@ export class SpectraSession {
     };
   }
 
-  #clearSignals() {
+  #clearSignals(reason = 'signals_cleared') {
+    this.diagnostics?.endSession(reason);
     const fps = this.frameRate.read();
     if (fps !== null) this.state.lastTrackingFps = fps;
     this.#signalGeneration++;
@@ -71,10 +81,12 @@ export class SpectraSession {
     this.frameRate.reset();
     this.#frameCount = 0;
     this.#frameTimestamp = 0;
+    this.#diagnosticValidationCode = null;
   }
 
-  #disposeSdk() {
-    this.#clearSignals();
+  #disposeSdk(reason = 'sdk_disposed') {
+    this.diagnostics?.event('session_disposed', { reason });
+    this.#clearSignals(reason);
     const sdk = this.#sdk;
     this.#sdk = null;
     this.#sdkStarted = false;
@@ -86,6 +98,8 @@ export class SpectraSession {
   #previewState() {
     this.state.phase = this.state.stream ? 'preview' : 'off';
     this.state.sdkStatus = 'idle';
+    this.state.errorCode = null;
+    this.state.retryable = false;
     this.state.hint = !this.state.stream ? 'Enable your camera for a live preview.'
       : !this.state.nativeAvailable ? this.state.desktop
         ? this.state.packaged
@@ -108,8 +122,9 @@ export class SpectraSession {
     needed = Boolean(needed);
     if (needed === this.#analysisNeeded) return this.#signalTask;
     this.#analysisNeeded = needed;
+    this.diagnostics?.event('analysis_demand', { analysisNeeded: needed, signalBlocked: this.#signalBlocked });
     if (!needed) {
-      this.#clearSignals();
+      this.#clearSignals('analysis_not_needed');
       // A pending start must not turn on the frame pump after its choice ended.
       // Cancel it rather than waiting through the SDK's full startup timeout.
       if (this.#sdkStarting) this.#disposeSdk();
@@ -134,13 +149,14 @@ export class SpectraSession {
   }
 
   stopCamera() {
+    this.diagnostics?.event('camera_stopped');
     this.#cameraGeneration++;
     this.#analysisNeeded = false;
     this.#signalBlocked = false;
     this.#disposeSdk();
     for (const track of this.state.stream?.getTracks() ?? []) track.stop();
     Object.assign(this.state, {
-      phase: 'off', sdkStatus: 'idle', stream: null, lastTrackingFps: null,
+      phase: 'off', sdkStatus: 'idle', stream: null, lastTrackingFps: null, errorCode: null, retryable: false,
       hint: 'Enable your camera for a live preview.',
     });
     this.emit();
@@ -155,6 +171,7 @@ export class SpectraSession {
 
   async startCamera(deviceId = '') {
     if (this.state.stream || this.state.phase === 'opening') return;
+    this.diagnostics?.event('camera_open_requested');
     const generation = ++this.#cameraGeneration;
     Object.assign(this.state, { phase: 'opening', hint: 'Opening camera. Allow access if your system asks.' });
     this.emit();
@@ -187,6 +204,11 @@ export class SpectraSession {
         throw { code: 'CAMERA_ENDED' };
       }
       this.state.stream = stream;
+      const mode = track.getSettings?.() ?? {};
+      this.diagnostics?.event('camera_opened', {
+        width: mode.width, height: mode.height, nominalFps: mode.frameRate,
+        cameraReadyState: track.readyState, cameraMuted: track.muted, cameraEnabled: track.enabled,
+      });
       track.addEventListener('ended', () => {
         if (generation !== this.#cameraGeneration) return;
         this.stopCamera();
@@ -198,6 +220,7 @@ export class SpectraSession {
       await this.#syncSignals();
     } catch (error) {
       if (generation !== this.#cameraGeneration) return;
+      this.diagnostics?.event('camera_error', { code: error?.code, source: 'camera_open' });
       this.stopCamera();
       Object.assign(this.state, { phase: 'camera-error', hint: spectraError(error) });
       this.emit();
@@ -206,6 +229,7 @@ export class SpectraSession {
 
   async setKey(key) {
     if (typeof key !== 'string' || !key.trim()) return;
+    this.diagnostics?.event('key_replaced');
     this.#key = key.trim().slice(0, 1024);
     this.state.hasKey = true;
     this.state.needsKey = false;
@@ -218,6 +242,7 @@ export class SpectraSession {
   // Explicit retry only. Automatic demand changes never retry a rejected key,
   // exhausted credits or a failed runtime on every turn/frame.
   async startSignals() {
+    this.diagnostics?.event('manual_retry');
     this.#signalBlocked = false;
     this.#analysisNeeded = true;
     await this.#syncSignals();
@@ -227,6 +252,7 @@ export class SpectraSession {
     if (!this.#analysisNeeded || !this.state.stream || this.#stopRequested) {
       if (this.#sdkStarted) {
         const sdk = this.#sdk;
+        this.diagnostics?.event('session_stop_requested');
         this.#clearSignals();
         this.#sdkStarted = false;
         try { await sdk.stop(); }
@@ -234,6 +260,7 @@ export class SpectraSession {
           if (sdk === this.#sdk) this.#disposeSdk();
         }
         if (sdk !== this.#sdk) return;
+        this.diagnostics?.event('session_stopped');
       }
       this.#stopRequested = false;
       if (!this.#signalBlocked) this.#previewState();
@@ -250,16 +277,24 @@ export class SpectraSession {
     const fail = (error) => {
       if (!current()) return;
       const lastTrackingFps = this.frameRate.read() ?? this.state.lastTrackingFps;
+      this.diagnostics?.event('sdk_error', {
+        code: error?.code, retryable: error?.retryable, source: error?.diagnosticSource ?? 'app_or_startup',
+        phase: this.state.phase, trackingFps: lastTrackingFps,
+      });
       this.#signalBlocked = true;
-      this.#disposeSdk();
+      this.#disposeSdk('sdk_error');
       Object.assign(this.state, {
         phase: 'signal-error', sdkStatus: 'error', hint: spectraError(error), needsKey: error?.code === 2, lastTrackingFps,
+        errorCode: error?.code ?? null,
+        retryable: error?.retryable === true || ['SIGNAL_STOPPED', 'SIGNAL_STALLED', 'SMARTSPECTRA_IPC_TIMEOUT'].includes(error?.code),
       });
       this.emit();
     };
     this.#failSignals = fail;
     this.#lastFeedbackAt = this.now();
-    Object.assign(this.state, { phase: 'starting', sdkStatus: 'starting', lastTrackingFps: null, hint: 'Face the camera in even light.' });
+    this.diagnostics?.beginSession();
+    Object.assign(this.state, { phase: 'starting', sdkStatus: 'starting', lastTrackingFps: null,
+      errorCode: null, retryable: false, hint: 'Face the camera in even light.' });
     this.emit();
     try {
       const { SmartSpectraSDK, requestedMetrics, decodeMetrics } = await this.loadSdk();
@@ -271,6 +306,7 @@ export class SpectraSession {
       this.#sdk = sdk;
       sdk.on('processingStatus', (status) => {
         if (!current()) return;
+        this.diagnostics?.event('sdk_status', { processingStatus: status });
         this.#lastFeedbackAt = this.now();
         if (status === 5 || (status === 1 && this.readings.startedAt !== null)) this.#stoppedAt = this.now();
         if (status === 3) {
@@ -284,6 +320,10 @@ export class SpectraSession {
       });
       sdk.on('validationStatus', (code, _timestampUs, hint) => {
         if (!current()) return;
+        if (code !== this.#diagnosticValidationCode) {
+          this.diagnostics?.event('sdk_validation', { validationCode: code, sdkTimestampUs: _timestampUs });
+          this.#diagnosticValidationCode = code;
+        }
         this.#lastFeedbackAt = this.now();
         this.state.validationAt = this.now();
         this.state.sdkStatus = 'running';
@@ -301,11 +341,16 @@ export class SpectraSession {
       sdk.on('metrics', (buffer) => {
         if (!current()) return;
         this.#lastFeedbackAt = this.now();
-        try { this.readings.ingest(decodeMetrics(buffer)); }
+        try {
+          const metrics = decodeMetrics(buffer);
+          this.readings.ingest(metrics);
+          this.diagnostics?.metrics(metrics);
+        }
         catch { fail({ code: 8 }); }
       });
       sdk.on('frameSentThrough', (_sent, timestampUs) => {
         if (!current()) return;
+        this.diagnostics?.frame(_sent, timestampUs);
         this.#lastFeedbackAt = this.now();
         // Count both accepted and rejected frames: a missing face must not
         // masquerade as a slow camera. Ignore duplicate/out-of-order callbacks.
@@ -314,11 +359,12 @@ export class SpectraSession {
           this.frameRate.record(++this.#frameCount);
         }
       });
-      sdk.on('error', (code, _message, _retryable) => fail({ code }));
+      sdk.on('error', (code, _message, retryable) => fail({ code, retryable, diagnosticSource: 'sdk_event' }));
       sdk.useMediaStream(this.state.stream);
       this.#sdkStarting = true;
       await sdk.start();
       if (current()) {
+        this.diagnostics?.event('sdk_start_resolved');
         this.#sdkStarting = false;
         this.#sdkStarted = true;
       }
